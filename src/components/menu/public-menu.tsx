@@ -1155,7 +1155,7 @@ export function PublicMenu() {
         <img
           src={restaurant.bannerUrl ?? "/banner.png"}
           alt="Banner promocional"
-          className="h-[140px] w-full rounded-2xl bg-slate-100 object-cover sm:h-[200px] md:h-[260px] lg:h-[300px]"
+          className="aspect-[5/1] max-h-[300px] w-full rounded-2xl bg-slate-100 object-cover"
         />
       </section>
 
