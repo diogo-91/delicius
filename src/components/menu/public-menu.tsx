@@ -464,7 +464,6 @@ export function PublicMenu() {
   const openingHours = useMemo(() => getOpeningHoursSummary(restaurant.weeklySchedule ?? defaultWeeklySchedule), [restaurant.weeklySchedule]);
   const openStatus = useMemo(() => getStoreOpenStatus(restaurant, now), [now, restaurant]);
   const storeAcceptingOrders = restaurant.isOpen && openStatus.isOpen;
-  const closedMessage = restaurant.isOpen ? openStatus.message : "Loja fechada temporariamente.";
   const todaySchedule = useMemo(
     () => (restaurant.weeklySchedule ?? defaultWeeklySchedule).find((day) => day.day === now.getDay()),
     [restaurant.weeklySchedule, now]
@@ -1314,13 +1313,6 @@ export function PublicMenu() {
 
       <div className="mx-auto grid w-full max-w-[1500px] gap-5 px-4 py-3 md:py-6 xl:w-[94%]">
         <section className="min-w-0 space-y-6 pb-12">
-          {!storeAcceptingOrders && (
-            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <strong className="font-semibold">Pedidos indisponíveis no momento.</strong>
-              <span className="ml-1">{closedMessage}</span>
-            </div>
-          )}
-
           {activeCategory === "all" && highlightProducts.length > 0 && (
             <div className="space-y-3">
               <div>
