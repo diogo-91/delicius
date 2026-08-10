@@ -1358,12 +1358,12 @@ export function PublicMenu() {
           )}
 
           {activeCategory === "all" && (
-            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-line2 bg-white p-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-6 rounded-2xl border border-line2 bg-white p-6 sm:grid-cols-4">
               {benefits.map((benefit) => (
-                <div key={benefit.title} className="flex flex-col items-start gap-1.5">
-                  <benefit.icon className="h-5 w-5 text-gold" />
-                  <p className="text-xs font-semibold leading-tight text-ink2">{benefit.title}</p>
-                  <p className="text-[11px] leading-tight text-muted2">{benefit.description}</p>
+                <div key={benefit.title} className="flex flex-col items-start gap-2">
+                  <benefit.icon className="h-7 w-7 text-gold" />
+                  <p className="text-base font-semibold leading-tight text-ink2">{benefit.title}</p>
+                  <p className="text-sm leading-snug text-muted2">{benefit.description}</p>
                 </div>
               ))}
             </div>
