@@ -418,7 +418,7 @@ export function PublicMenu() {
     [categories, products]
   );
 
-  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, []), [categories, products]);
+  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, [], 5), [categories, products]);
   const crossSellProducts = useMemo(
     () => getCrossSellProducts(categories, products, cart.map((item) => item.productId)),
     [categories, products, cart]
@@ -1319,9 +1319,9 @@ export function PublicMenu() {
                 <h2 className="font-display text-xl font-semibold text-ink2 md:text-2xl">Selecionados para você ❤️</h2>
                 <p className="mt-0.5 text-sm text-muted2">Uma seleção especial do nosso cardápio</p>
               </div>
-              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
                 {highlightProducts.map((product) => (
-                  <div key={product.id} className="w-[168px] shrink-0 rounded-2xl border border-line2 bg-white p-2">
+                  <div key={product.id} className="rounded-2xl border border-line2 bg-white p-2">
                     <img src={product.imageUrl} alt={product.name} className="aspect-square w-full rounded-xl object-cover" />
                     <p className="mt-2 line-clamp-2 text-sm font-semibold leading-tight text-ink2">{product.name}</p>
                     <strong className="mt-1 block text-sm font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
