@@ -22,7 +22,20 @@ const config: Config = {
           500: "#0b315f",
           700: "#061f3f",
           900: "#03152d"
-        }
+        },
+        cta: {
+          DEFAULT: "#B3261E",
+          hover: "#8F1D2C",
+          pressed: "#7A2E1C"
+        },
+        gold: "#D4A72C",
+        paper: "#FFF8EF",
+        ink2: "#3A1F16",
+        muted2: "#75645D",
+        line2: "#EADFD8"
+      },
+      fontFamily: {
+        display: ["var(--font-display)"]
       },
       boxShadow: {
         panel: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",

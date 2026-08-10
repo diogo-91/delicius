@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronDown, Clock, Flame, Gift, ListFilter, MapPin, Minus, Plus, Send, ShoppingBag, Sparkles, Star, UserCircle, Utensils, X } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, Clock, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, createOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -13,13 +13,22 @@ import { formatCurrency, formatScheduledFor } from "@/lib/utils";
 import type { CartItem, Category, Coupon, Order, OrderStatus, OrderType, PaymentMethod, Product, Restaurant, WeekdaySchedule } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { GoogleIcon } from "@/components/auth/google-icon";
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
+import { MenuHero, getHeroProduct } from "@/components/menu/menu-hero";
+import { generateAvailableSlots, type Slot } from "@/lib/menu/slots";
+import { getCrossSellProducts, getHighlightProducts } from "@/lib/menu/highlights";
+import { SocialProof } from "@/components/menu/social-proof";
 
 const categoryIcons = [Gift, Star, Flame, Sparkles, Utensils, Utensils, ShoppingBag, ShoppingBag];
 const menuSlug = "delicious-gourmet-bolos-e-salgados";
-const scheduleCategoryNames = ["Bolo de Pote", "Bolo para Café", "Salgados"];
+
+const benefits = [
+  { icon: Sparkles, title: "Ingredientes selecionados", description: "Produtos frescos e de alta qualidade." },
+  { icon: Heart, title: "Feito com amor", description: "Receitas especiais da casa." },
+  { icon: Truck, title: "Entrega rápida e segura", description: "Seu pedido chega com cuidado." },
+  { icon: PackageCheck, title: "Retirada no balcão", description: "Mais rapidez e praticidade." }
+];
 
 const defaultWeeklySchedule: WeekdaySchedule[] = [
   { day: 0, label: "Domingo", enabled: true, open: "09:00", close: "11:30" },
@@ -205,6 +214,7 @@ export function PublicMenu() {
   const [products, setProducts] = useState<Product[]>(() => (supabaseConfigured ? [] : getProducts().filter((product) => product.active)));
   const [menuLoading, setMenuLoading] = useState(supabaseConfigured);
   const [activeCategory, setActiveCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>(readSavedCart);
   const [coupons, setCoupons] = useState<Coupon[]>(getCoupons());
   const [ordersSnapshot, setOrdersSnapshot] = useState<Order[]>(getOrders());
@@ -235,11 +245,11 @@ export function PublicMenu() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponMessage, setCouponMessage] = useState("");
   const [now, setNow] = useState(() => new Date());
-  const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [scheduleProduct, setScheduleProduct] = useState<Product | null>(null);
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("");
   const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [slotPickerOpen, setSlotPickerOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [lastOrderWasGuest, setLastOrderWasGuest] = useState(false);
+  const [guestSavePromptDismissed, setGuestSavePromptDismissed] = useState(false);
   const remoteMenuLoadedRef = useRef(false);
   const remoteOrdersLoadedRef = useRef(false);
   const [cardForm, setCardForm] = useState({
@@ -397,23 +407,28 @@ export function PublicMenu() {
   }, [supabaseConfigured]);
 
   const filteredProducts = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
     return products.filter((product) => {
       const matchesCategory = activeCategory === "all" || product.categoryId === activeCategory;
-      return matchesCategory;
+      const matchesSearch = !normalizedQuery || product.name.toLowerCase().includes(normalizedQuery);
+      return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, products]);
+  }, [activeCategory, products, searchQuery]);
 
   const categoriesWithProducts = useMemo(
     () => categories.filter((category) => products.some((product) => product.categoryId === category.id)),
     [categories, products]
   );
 
-  const scheduleProducts = useMemo(() => {
-    const scheduleCategoryIds = new Set(
-      categories.filter((category) => scheduleCategoryNames.includes(category.name)).map((category) => category.id)
-    );
-    return products.filter((product) => scheduleCategoryIds.has(product.categoryId));
-  }, [categories, products]);
+  const heroProduct = useMemo(() => getHeroProduct(categories, products), [categories, products]);
+  const highlightProducts = useMemo(
+    () => getHighlightProducts(categories, products, heroProduct ? [heroProduct.id] : []),
+    [categories, products, heroProduct]
+  );
+  const crossSellProducts = useMemo(
+    () => getCrossSellProducts(categories, products, cart.map((item) => item.productId)),
+    [categories, products, cart]
+  );
 
   const visibleCategories = useMemo(
     () =>
@@ -447,15 +462,23 @@ export function PublicMenu() {
   const customerIsAuthenticated = Boolean(user || localCustomerSession);
   const customerHistory = customerIsAuthenticated ? ordersSnapshot.slice(0, 3) : [];
   const displayName = useMemo(() => restaurant.name.replace(/\s*BOLOS E SALGADOS\s*/i, "").trim(), [restaurant.name]);
+  const [wordmarkName, wordmarkSubtitle] = useMemo(() => {
+    const [first, ...rest] = displayName.split(/\s+/).filter(Boolean);
+    const titleCased = first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : displayName;
+    return [titleCased, rest.join(" ")];
+  }, [displayName]);
   const openingHours = useMemo(() => getOpeningHoursSummary(restaurant.weeklySchedule ?? defaultWeeklySchedule), [restaurant.weeklySchedule]);
   const openStatus = useMemo(() => getStoreOpenStatus(restaurant, now), [now, restaurant]);
   const storeAcceptingOrders = restaurant.isOpen && openStatus.isOpen;
   const closedMessage = restaurant.isOpen ? openStatus.message : "Loja fechada temporariamente.";
-  const maxScheduleDate = useMemo(() => {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().slice(0, 10);
-  }, [now]);
+  const todaySchedule = useMemo(
+    () => (restaurant.weeklySchedule ?? defaultWeeklySchedule).find((day) => day.day === now.getDay()),
+    [restaurant.weeklySchedule, now]
+  );
+  const availableSlots = useMemo(
+    () => generateAvailableSlots(restaurant.weeklySchedule ?? defaultWeeklySchedule, restaurant.averagePrepTime, now),
+    [restaurant.weeklySchedule, restaurant.averagePrepTime, now]
+  );
 
   function getAvailableStock(product: Product) {
     const cartQuantity = cart
@@ -464,65 +487,51 @@ export function PublicMenu() {
     return Math.max((product.stock ?? 20) - cartQuantity, 0);
   }
 
-  function addToCart(product: Product) {
-    if (!storeAcceptingOrders) return;
+  function getCartQuantity(product: Product) {
+    return cart.filter((item) => item.productId === product.id).reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  function incrementProduct(product: Product) {
     if (getAvailableStock(product) <= 0) return;
-    const variation = product.variations[0];
     setCreatedOrder(null);
     setPaymentStatus("idle");
     setPaymentMessage("");
     setAppliedCoupon(null);
     setCouponMessage("");
-    setCart((current) => [
-      ...current,
-      {
-        productId: product.id,
-        productName: product.name,
-        unitPrice: variation?.price ?? product.price,
-        quantity: 1,
-        variation,
-        addons: [],
-        note: ""
+    setCart((current) => {
+      const index = current.findIndex((item) => item.productId === product.id);
+      if (index === -1) {
+        const variation = product.variations[0];
+        return [
+          ...current,
+          {
+            productId: product.id,
+            productName: product.name,
+            unitPrice: variation?.price ?? product.price,
+            quantity: 1,
+            variation,
+            addons: [],
+            note: ""
+          }
+        ];
       }
-    ]);
+      return current.map((item, itemIndex) => (itemIndex === index ? { ...item, quantity: item.quantity + 1 } : item));
+    });
   }
 
-  function openScheduleDatePicker(product: Product) {
-    if (getAvailableStock(product) <= 0) return;
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setScheduleDate(tomorrow.toISOString().slice(0, 10));
-    setScheduleTime("12:00");
-    setScheduleProduct(product);
-  }
-
-  function confirmScheduledProduct() {
-    if (!scheduleProduct || !scheduleDate || !scheduleTime) return;
-    const product = scheduleProduct;
-    const variation = product.variations[0];
-    setCreatedOrder(null);
+  function decrementProduct(product: Product) {
     setPaymentStatus("idle");
     setPaymentMessage("");
     setAppliedCoupon(null);
     setCouponMessage("");
-    setCart((current) => [
-      ...current,
-      {
-        productId: product.id,
-        productName: product.name,
-        unitPrice: variation?.price ?? product.price,
-        quantity: 1,
-        variation,
-        addons: [],
-        note: "",
-        scheduledFor: `${scheduleDate}T${scheduleTime}`
-      }
-    ]);
-    setScheduleProduct(null);
-    setScheduleDate("");
-    setScheduleTime("");
-    setScheduleOpen(false);
-    setCartModalOpen(true);
+    setCart((current) => {
+      const index = current.findIndex((item) => item.productId === product.id);
+      if (index === -1) return current;
+      const nextQuantity = current[index].quantity - 1;
+      return nextQuantity <= 0
+        ? current.filter((_, itemIndex) => itemIndex !== index)
+        : current.map((item, itemIndex) => (itemIndex === index ? { ...item, quantity: nextQuantity } : item));
+    });
   }
 
   function updateQuantity(index: number, quantity: number) {
@@ -533,22 +542,12 @@ export function PublicMenu() {
     setCart((current) => current.flatMap((item, itemIndex) => (itemIndex === index ? (quantity <= 0 ? [] : [{ ...item, quantity }]) : [item])));
   }
 
-  async function finishOrder() {
-    if (!storeAcceptingOrders) {
-      setPaymentMessage("A loja está fora do horário de funcionamento. Não é possível finalizar pedidos agora.");
-      return;
-    }
-
-    if (!customerIsAuthenticated) {
-      setAuthModalOpen(true);
-      return;
-    }
-
+  async function submitOrder(items: CartItem[]) {
     const checkoutCustomer = addressMode === "saved" ? customerProfile : customer;
     const customerName = checkoutCustomer.name || customer.name || "Cliente Teste";
     const customerPhone = checkoutCustomer.phone || customer.phone || "(15) 99999-0000";
 
-    if (cart.length === 0) return;
+    if (items.length === 0) return;
     if (type === "delivery" && addressMode === "saved" && !formatCustomerAddress(customerProfile)) {
       setPaymentMessage("Cadastre um endereco na Area do cliente ou selecione outro endereco para entrega.");
       return;
@@ -565,6 +564,8 @@ export function PublicMenu() {
           : formatCustomerAddress(customer)
         : undefined;
 
+    const wasGuest = !customerIsAuthenticated;
+
     const order = createOrder({
       customer: {
         name: customerName,
@@ -573,7 +574,7 @@ export function PublicMenu() {
       },
       type,
       paymentMethod,
-      items: cart,
+      items,
       discount,
       couponCode: appliedCoupon?.code
     });
@@ -586,6 +587,20 @@ export function PublicMenu() {
     setAppliedCoupon(null);
     setCouponMessage("");
     setCustomer(customerProfile);
+    setSlotPickerOpen(false);
+    setSelectedSlot(null);
+    setLastOrderWasGuest(wasGuest);
+    setGuestSavePromptDismissed(false);
+
+    if (wasGuest && supabaseConfigured) {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        await supabase.auth.signInAnonymously();
+      } catch {
+        // "Anonymous Sign-ins" pode ainda nao estar habilitado no projeto Supabase.
+        // O pedido local ja foi criado; a sincronizacao abaixo cai no aviso padrao.
+      }
+    }
 
     try {
       const remoteOrder = await createRemoteOrder(restaurant.slug, order);
@@ -593,6 +608,19 @@ export function PublicMenu() {
     } catch (error) {
       setPaymentMessage(error instanceof Error ? `Pedido salvo, mas houve um erro ao enviar para o painel: ${error.message}` : "Pedido salvo, mas nao foi possivel enviar para o painel.");
     }
+  }
+
+  async function finishOrder() {
+    if (!storeAcceptingOrders) {
+      setPaymentMessage("A loja está fora do horário de funcionamento. Não é possível finalizar pedidos agora.");
+      return;
+    }
+    await submitOrder(cart);
+  }
+
+  async function confirmScheduling() {
+    if (!selectedSlot) return;
+    await submitOrder(cart.map((item) => ({ ...item, scheduledFor: selectedSlot.iso })));
   }
 
   async function signInWithGoogle() {
@@ -773,7 +801,59 @@ export function PublicMenu() {
     }
   }
 
-  const cartContent = createdOrder ? (
+  const cartContent = slotPickerOpen ? (
+    <div className="p-6">
+      <h3 className="text-lg font-semibold text-ink2">Agendar pedido</h3>
+      <p className="mt-1 text-sm text-muted2">A loja está fechada agora. Escolha quando deseja receber ou retirar:</p>
+      {availableSlots.length === 0 ? (
+        <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-muted2">
+          Nenhum horário disponível no momento. Tente novamente mais tarde ou fale conosco pelo WhatsApp.
+        </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {availableSlots.map((slot) => (
+            <button
+              key={slot.iso}
+              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                selectedSlot?.iso === slot.iso ? "border-cta bg-cta text-white" : "border-line2 bg-white text-ink2 hover:border-cta"
+              }`}
+              onClick={() => setSelectedSlot(slot)}
+              type="button"
+            >
+              {slot.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {selectedSlot && (
+        <div className="mt-4 rounded-xl bg-paper p-4 text-sm text-ink2">
+          <p className="font-semibold">Pedido agendado</p>
+          <p className="mt-1 flex items-center gap-1.5">
+            <CalendarDays className="h-4 w-4" />
+            {selectedSlot.label}
+          </p>
+          <p className="mt-1">{type === "delivery" ? "🛵 Entrega" : "📍 Retirada no balcão"}</p>
+        </div>
+      )}
+      {paymentMessage && <p className="mt-3 text-xs font-medium text-amber-700">{paymentMessage}</p>}
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <Button
+          variant="secondary"
+          className="h-11 rounded-xl"
+          onClick={() => {
+            setSlotPickerOpen(false);
+            setSelectedSlot(null);
+          }}
+          type="button"
+        >
+          Voltar
+        </Button>
+        <Button variant="cta" className="h-11 rounded-xl" disabled={!selectedSlot} onClick={confirmScheduling} type="button">
+          CONFIRMAR • {formatCurrency(total)}
+        </Button>
+      </div>
+    </div>
+  ) : createdOrder ? (
     <div className="p-6 text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-700">
         <Check className="h-8 w-8" />
@@ -842,6 +922,27 @@ export function PublicMenu() {
           </div>
         </div>
       )}
+      {lastOrderWasGuest && !guestSavePromptDismissed && (
+        <div className="mt-4 rounded-xl border border-line2 bg-paper p-4 text-left">
+          <p className="text-sm font-semibold text-ink2">Quer salvar seus dados para pedir mais rápido da próxima vez?</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button variant="secondary" className="h-10 rounded-lg text-xs" onClick={() => setGuestSavePromptDismissed(true)} type="button">
+              Agora não
+            </Button>
+            <Button
+              variant="cta"
+              className="h-10 rounded-lg text-xs"
+              onClick={() => {
+                setGuestSavePromptDismissed(true);
+                setAuthModalOpen(true);
+              }}
+              type="button"
+            >
+              Salvar dados
+            </Button>
+          </div>
+        </div>
+      )}
       <Button
         variant="secondary"
         className="mt-4 w-full rounded-xl"
@@ -885,19 +986,36 @@ export function PublicMenu() {
             </div>
           </div>
         ))}
+
+        {cart.length > 0 && crossSellProducts.length > 0 && (
+          <div className="rounded-xl border border-line2 bg-paper p-4">
+            <p className="text-sm font-semibold text-ink2">Combine com ❤️</p>
+            <div className="mt-3 space-y-2">
+              {crossSellProducts.map((product) => (
+                <div key={product.id} className="flex items-center justify-between gap-3 rounded-lg bg-white p-2.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <img src={product.imageUrl} alt={product.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-ink2">{product.name}</p>
+                      <p className="text-xs text-muted2">{formatCurrency(product.variations[0]?.price ?? product.price)}</p>
+                    </div>
+                  </div>
+                  <button
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cta text-white disabled:opacity-40"
+                    disabled={getAvailableStock(product) <= 0}
+                    onClick={() => incrementProduct(product)}
+                    type="button"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 border-t border-line pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-        {!customerIsAuthenticated ? (
-          <div className="rounded-xl border border-line bg-white/70 p-5 text-center">
-            <p className="text-sm font-semibold text-ink">Entre para continuar</p>
-            <p className="mt-1 text-sm leading-5 text-muted">Faca login ou crie uma conta para finalizar seu pedido. Seus itens continuam salvos na sacola.</p>
-            <Button className="mt-4 h-11 w-full rounded-xl" onClick={() => setAuthModalOpen(true)} type="button" disabled={cart.length === 0}>
-              Fazer login
-            </Button>
-          </div>
-        ) : (
-          <>
         <Input placeholder="Nome completo" value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} />
         <Input placeholder="Telefone/WhatsApp" value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: event.target.value })} />
         <div>
@@ -1063,10 +1181,14 @@ export function PublicMenu() {
           </div>
         </div>
 
-        <Button className="h-12 w-full rounded-xl" disabled={!storeAcceptingOrders} onClick={finishOrder} type="button">
-          {storeAcceptingOrders ? "Finalizar pedido teste" : "Loja fechada no momento"}
-        </Button>
-          </>
+        {storeAcceptingOrders ? (
+          <Button variant="cta" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={finishOrder} type="button">
+            FINALIZAR PEDIDO • {formatCurrency(total)}
+          </Button>
+        ) : (
+          <Button variant="cta" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={() => setSlotPickerOpen(true)} type="button">
+            AGENDAR PEDIDO
+          </Button>
         )}
       </div>
     </div>
@@ -1074,99 +1196,197 @@ export function PublicMenu() {
 
   return (
     <main className="min-h-screen bg-[#f7f2ed] pb-24 text-ink md:bg-[#f5f6f8] xl:pb-12">
-      <section className="relative z-30 overflow-hidden bg-[#f7f2ed] text-ink md:sticky md:top-0 md:bg-navy-900 md:text-white">
-        <div
-          className="absolute inset-0 hidden md:block"
-          style={{
-            backgroundImage:
-              `linear-gradient(90deg, rgba(3, 10, 24, 0.94), rgba(3, 10, 24, 0.76)), url('${restaurant.coverUrl ?? "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1800&q=85"}')`,
-            backgroundPosition: "center",
-            backgroundSize: "cover"
-          }}
-        />
-
-        <div className="relative md:hidden">
-          <div
-            className="h-[104px] bg-cover bg-center"
-            style={{
-              backgroundImage:
-                `linear-gradient(180deg, rgba(79, 38, 24, 0.10), rgba(36, 18, 11, 0.58)), url('https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=1200&q=85')`
-            }}
-          />
-          <div className="-mt-7 px-4">
-            <div className="rounded-2xl border border-white/80 bg-white px-3 py-2 shadow-[0_6px_18px_rgba(79,38,24,0.06)] ring-1 ring-black/[0.025]">
-              <div className="flex items-center gap-3">
-                <img
-                  src={restaurant.logoUrl ?? "/komanda-logo.png"}
-                  alt={restaurant.name}
-                  className="-mt-6 h-14 w-14 shrink-0 rounded-2xl border-[3px] border-white bg-white object-contain p-1 shadow-[0_6px_14px_rgba(79,38,24,0.10)]"
-                />
-                <div className="min-w-0 flex-1">
-                  <h1 className="line-clamp-2 text-[17px] font-bold leading-[1.12] tracking-tight text-ink">{displayName}</h1>
-                  <p className="mt-0.5 text-[12px] font-medium leading-4 text-muted">Doceria artesanal</p>
-                  <p className={`mt-0.5 flex items-center gap-1 text-[11px] font-semibold leading-4 ${storeAcceptingOrders ? "text-emerald-700" : "text-red-700"}`}>
-                    <span className={`h-2 w-2 rounded-full ${storeAcceptingOrders ? "bg-emerald-500" : "bg-red-500"}`} />
-                    {storeAcceptingOrders ? "Aberto até 17:30 • Delivery disponível" : "Fechado no momento"}
-                  </p>
-                </div>
-                <button
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f7f2ed] text-brand-700 transition active:scale-[0.96]"
-                  onClick={() => setInfoModalOpen(true)}
-                  aria-label="Endereço e horários"
-                  type="button"
-                >
-                  <MapPin className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
+      <header className="sticky top-0 z-30 border-b border-line2 bg-white">
+        <div className="mx-auto flex w-full max-w-[1500px] items-center gap-3 px-4 py-3 xl:w-[94%]">
+          <div className="flex shrink-0 flex-col items-center leading-none">
+            <Crown className="h-3.5 w-3.5 text-ink2" strokeWidth={1.5} />
+            <span className="font-display text-xl italic text-ink2 md:text-2xl">{wordmarkName}</span>
+            {wordmarkSubtitle && (
+              <span className="mt-1 border-t border-ink2/50 pt-0.5 text-[9px] font-semibold tracking-[0.35em] text-ink2 md:text-[10px]">{wordmarkSubtitle}</span>
+            )}
           </div>
-        </div>
 
-        <div className="relative mx-auto hidden w-full max-w-[1500px] px-4 py-6 md:block xl:w-[94%]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex min-w-0 items-center gap-3 md:gap-4">
-              <img src={restaurant.logoUrl ?? "/komanda-logo.png"} alt={restaurant.name} className="h-12 w-12 shrink-0 rounded-2xl bg-white object-contain p-1.5 shadow-panel ring-1 ring-white/70 md:h-16 md:w-16 md:rounded-xl md:ring-2 md:ring-brand-500/30" />
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-start gap-2 md:flex-wrap md:items-center md:gap-3">
-                  <h1 className="line-clamp-2 min-w-0 max-w-[220px] text-[22px] font-semibold leading-[1.05] tracking-tight md:max-w-none md:whitespace-nowrap md:text-2xl lg:text-3xl">{displayName}</h1>
-                  <Badge tone={storeAcceptingOrders ? "green" : "red"}>{storeAcceptingOrders ? "Loja online" : "Loja fechada"}</Badge>
-                </div>
-                <p className="mt-1 max-w-2xl text-sm font-medium leading-5 text-white/78 md:mt-2">
-                  A melhor doceria de Sorocaba.
-                </p>
-              </div>
+          <div className="hidden flex-1 md:block">
+            <div className="relative mx-auto max-w-xl">
+              <input
+                className="h-11 w-full rounded-full border border-line2 bg-white pl-4 pr-11 text-sm text-ink2 placeholder:text-muted2 focus:border-cta focus:outline-none"
+                placeholder="O que você está com vontade de comer?"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                type="search"
+              />
+              <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted2" />
             </div>
+          </div>
 
+          <div className="ml-auto flex shrink-0 items-center gap-3 md:ml-0 md:gap-5">
             <button
-              className="flex h-9 shrink-0 items-center gap-2 rounded-full border border-white/12 bg-white/10 px-4 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/15"
-              onClick={() => setInfoModalOpen(true)}
+              className="flex h-6 w-6 items-center justify-center text-ink2 md:hidden"
+              onClick={() => document.getElementById("mobile-search-input")?.focus()}
+              aria-label="Buscar"
               type="button"
             >
-              <MapPin className="h-4 w-4 text-brand-100" />
-              Endereço e horários
-              <ChevronDown className="h-4 w-4 -rotate-90 text-white/70" />
+              <Search className="h-5 w-5" />
+            </button>
+            <button
+              className="hidden items-center gap-1.5 text-sm font-medium text-ink2 transition hover:text-cta md:flex"
+              onClick={() => setMobileCustomerOpen(true)}
+              type="button"
+            >
+              <UserCircle className="h-5 w-5" />
+              Área do cliente
+            </button>
+            <button className="flex h-6 w-6 items-center justify-center text-ink2 md:hidden" onClick={() => setMobileCustomerOpen(true)} aria-label="Área do cliente" type="button">
+              <UserCircle className="h-5 w-5" />
+            </button>
+            <button className="relative flex items-center gap-2" onClick={openCart} type="button" aria-label="Sacola">
+              <span className="relative flex h-6 w-6 items-center justify-center">
+                <ShoppingBag className="h-6 w-6 text-ink2" />
+                {cart.length > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-cta text-[10px] font-bold leading-none text-white">
+                    {cart.length}
+                  </span>
+                )}
+              </span>
+              {subtotal > 0 && <span className="hidden text-sm font-bold text-gold sm:block">{formatCurrency(subtotal)}</span>}
             </button>
           </div>
         </div>
-      </section>
 
-      <section className="relative z-20 mx-auto mt-4 w-full max-w-[1500px] px-4 md:mt-6 xl:w-[94%]">
-        <img
-          src={restaurant.bannerUrl ?? "/banner.png"}
-          alt="Banner promocional"
-          className="aspect-[5/1] max-h-[300px] w-full rounded-2xl bg-slate-100 object-cover"
-        />
-      </section>
+        <div className="px-4 pb-3 md:hidden">
+          <div className="relative">
+            <input
+              id="mobile-search-input"
+              className="h-10 w-full rounded-full border border-line2 bg-white pl-4 pr-10 text-sm text-ink2 placeholder:text-muted2 focus:border-cta focus:outline-none"
+              placeholder="Buscar bolo, salgado, doce..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              type="search"
+            />
+            <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted2" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 border-t border-line2 px-4 py-2 xl:px-[3%]">
+          <span className={`flex items-center gap-1.5 text-xs font-semibold ${storeAcceptingOrders ? "text-emerald-700" : "text-red-700"}`}>
+            <span className={`h-2 w-2 rounded-full ${storeAcceptingOrders ? "bg-emerald-500" : "bg-red-500"}`} />
+            {storeAcceptingOrders ? "Aberto agora" : "Fechado agora"}
+            {storeAcceptingOrders && todaySchedule && ` • Fecha às ${formatScheduleTime(todaySchedule.close)}`}
+          </span>
+          <button className="text-xs font-medium text-muted2 underline-offset-2 hover:underline" onClick={() => setInfoModalOpen(true)} type="button">
+            Endereço e horários
+          </button>
+        </div>
+      </header>
+
+      <MenuHero
+        restaurant={restaurant}
+        displayName={displayName}
+        heroProduct={heroProduct}
+        quantityInCart={heroProduct ? getCartQuantity(heroProduct) : 0}
+        onAdd={() => heroProduct && incrementProduct(heroProduct)}
+        onIncrement={() => heroProduct && incrementProduct(heroProduct)}
+        onDecrement={() => heroProduct && decrementProduct(heroProduct)}
+        onOpenInfo={() => setInfoModalOpen(true)}
+      />
+
+      <nav className="sticky top-[150px] z-20 mt-4 w-full overflow-x-auto bg-paper py-3 md:top-[102px]">
+        <div className="mx-auto flex w-max min-w-full gap-2 px-4 xl:w-[94%]">
+          <button
+            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              activeCategory === "all" ? "border border-line2 bg-white text-ink2 shadow-sm" : "border border-transparent text-muted2 hover:text-ink2"
+            }`}
+            onClick={() => setActiveCategory("all")}
+            type="button"
+          >
+            <Star className={`h-4 w-4 ${activeCategory === "all" ? "fill-gold text-gold" : ""}`} />
+            Destaques
+          </button>
+          {categoriesWithProducts.map((category, index) => {
+            const Icon = categoryIcons[index % categoryIcons.length];
+            return (
+              <button
+                key={category.id}
+                className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  activeCategory === category.id ? "border border-line2 bg-white text-ink2 shadow-sm" : "border border-transparent text-muted2 hover:text-ink2"
+                }`}
+                onClick={() => setActiveCategory(category.id)}
+                type="button"
+              >
+                <Icon className={`h-4 w-4 ${activeCategory === category.id ? "text-gold" : ""}`} />
+                {category.name}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       <div className="mx-auto grid w-full max-w-[1500px] gap-5 px-4 py-3 md:py-6 xl:w-[94%] xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="space-y-6 pb-12 xl:pr-5">
+        <section className="min-w-0 space-y-6 pb-12 xl:pr-5">
           {!storeAcceptingOrders && (
             <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
               <strong className="font-semibold">Pedidos indisponíveis no momento.</strong>
               <span className="ml-1">{closedMessage}</span>
             </div>
           )}
+
+          {activeCategory === "all" && highlightProducts.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h2 className="font-display text-xl font-semibold text-ink2 md:text-2xl">Selecionados para você ❤️</h2>
+                <p className="mt-0.5 text-sm text-muted2">Uma seleção especial do nosso cardápio</p>
+              </div>
+              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+                {highlightProducts.map((product) => (
+                  <div key={product.id} className="w-[168px] shrink-0 rounded-2xl border border-line2 bg-white p-2">
+                    <img src={product.imageUrl} alt={product.name} className="aspect-square w-full rounded-xl object-cover" />
+                    <p className="mt-2 line-clamp-2 text-sm font-semibold leading-tight text-ink2">{product.name}</p>
+                    <strong className="mt-1 block text-sm font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
+                    {getCartQuantity(product) === 0 ? (
+                      <Button
+                        variant="cta"
+                        className="mt-2 h-8 w-full rounded-full text-xs"
+                        disabled={getAvailableStock(product) <= 0}
+                        onClick={() => incrementProduct(product)}
+                        type="button"
+                      >
+                        {getAvailableStock(product) <= 0 ? "Sem estoque" : "Adicionar"}
+                      </Button>
+                    ) : (
+                      <div className="mt-2 flex h-8 w-full items-center justify-between rounded-full bg-paper px-1">
+                        <button className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-ink2 shadow-sm" onClick={() => decrementProduct(product)} type="button">
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="text-xs font-bold text-ink2">{getCartQuantity(product)}</span>
+                        <button
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-ink2 shadow-sm disabled:opacity-40"
+                          disabled={getAvailableStock(product) <= 0}
+                          onClick={() => incrementProduct(product)}
+                          type="button"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeCategory === "all" && (
+            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-line2 bg-white p-4 sm:grid-cols-4">
+              {benefits.map((benefit) => (
+                <div key={benefit.title} className="flex flex-col items-start gap-1.5">
+                  <benefit.icon className="h-5 w-5 text-gold" />
+                  <p className="text-xs font-semibold leading-tight text-ink2">{benefit.title}</p>
+                  <p className="text-[11px] leading-tight text-muted2">{benefit.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeCategory === "all" && <SocialProof />}
 
           {menuLoading && (
             <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
@@ -1188,7 +1408,7 @@ export function PublicMenu() {
                         </span>
                       )}
                       <div className="min-w-0">
-                        <h3 className="text-[19px] font-semibold leading-6 text-ink md:text-xl">{category.name}</h3>
+                        <h3 className="font-display text-[19px] font-semibold leading-6 text-ink2 md:text-xl">{category.name}</h3>
                         {category.id === "cat_promocao" && <p className="mt-0.5 text-[11px] font-medium text-brand-700 md:hidden">Seleção especial de hoje</p>}
                       </div>
                     </div>
@@ -1227,26 +1447,43 @@ export function PublicMenu() {
                           </div>
                           <p className="mt-2 hidden line-clamp-3 text-sm leading-5 text-muted md:block xl:max-w-[52ch] 2xl:max-w-none">{product.description}</p>
                         </div>
-                        <Button
-                          className="mt-2 h-8 w-full rounded-full text-sm font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97] md:mt-3 md:h-10 md:rounded-lg"
-                          disabled={getAvailableStock(product) <= 0}
-                          type="button"
-                          onClick={() => (storeAcceptingOrders ? addToCart(product) : openScheduleDatePicker(product))}
-                        >
-                          {getAvailableStock(product) <= 0 ? (
-                            "Sem estoque"
-                          ) : storeAcceptingOrders ? (
-                            <>
-                              <Plus className="h-4 w-4" />
-                              Adicionar
-                            </>
-                          ) : (
-                            <>
-                              <CalendarDays className="h-4 w-4" />
-                              Agendar
-                            </>
-                          )}
-                        </Button>
+                        {getCartQuantity(product) === 0 ? (
+                          <Button
+                            variant="cta"
+                            className="mt-2 h-8 w-full rounded-full text-sm font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97] md:mt-3 md:h-10 md:rounded-lg"
+                            disabled={getAvailableStock(product) <= 0}
+                            type="button"
+                            onClick={() => incrementProduct(product)}
+                          >
+                            {getAvailableStock(product) <= 0 ? (
+                              "Sem estoque"
+                            ) : (
+                              <>
+                                <Plus className="h-4 w-4" />
+                                ADICIONAR • {formatCurrency(product.variations[0]?.price ?? product.price)}
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <div className="mt-2 flex h-8 w-full items-center justify-between rounded-full bg-paper px-1 md:mt-3 md:h-10 md:rounded-lg">
+                            <button
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-ink2 shadow-sm md:h-8 md:w-8"
+                              onClick={() => decrementProduct(product)}
+                              type="button"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <span className="text-sm font-bold text-ink2">{getCartQuantity(product)}</span>
+                            <button
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-ink2 shadow-sm disabled:opacity-40 md:h-8 md:w-8"
+                              disabled={getAvailableStock(product) <= 0}
+                              onClick={() => incrementProduct(product)}
+                              type="button"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </article>
                   ))}
@@ -1454,76 +1691,6 @@ export function PublicMenu() {
         </div>
       )}
 
-      {scheduleOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/60 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/70 bg-white shadow-panel">
-            <div className="flex items-center justify-between border-b border-line px-5 py-4">
-              <div>
-                <h2 className="text-base font-semibold text-ink">Agendar pedido</h2>
-                <p className="mt-0.5 text-xs text-muted">Escolha um item e a data em que deseja receber.</p>
-              </div>
-              <button className="rounded-full p-1.5 text-muted transition hover:bg-slate-100" onClick={() => setScheduleOpen(false)} type="button">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="scrollbar-clean grid gap-3 overflow-y-auto p-5 sm:grid-cols-2">
-              {scheduleProducts.length === 0 && (
-                <p className="text-sm text-muted sm:col-span-2">Nenhum produto disponível para agendamento no momento.</p>
-              )}
-              {scheduleProducts.map((product) => (
-                <div key={product.id} className="flex gap-3 rounded-xl border border-line bg-white/70 p-3">
-                  <img src={product.imageUrl} alt={product.name} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-ink">{product.name}</p>
-                    <p className="text-sm font-bold text-brand-700">{formatCurrency(product.variations[0]?.price ?? product.price)}</p>
-                    <Button
-                      className="mt-2 h-8 w-full rounded-lg text-xs"
-                      disabled={!storeAcceptingOrders || getAvailableStock(product) <= 0}
-                      onClick={() => openScheduleDatePicker(product)}
-                      type="button"
-                    >
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      {getAvailableStock(product) > 0 ? "Agendar" : "Sem estoque"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {scheduleProduct && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xs rounded-2xl border border-white/70 bg-white p-5 shadow-panel">
-            <h3 className="text-sm font-semibold text-ink">Para quando?</h3>
-            <p className="mt-1 text-xs text-muted">{scheduleProduct.name}</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Input
-                type="date"
-                value={scheduleDate}
-                min={new Date().toISOString().slice(0, 10)}
-                max={maxScheduleDate}
-                onChange={(event) => setScheduleDate(event.target.value)}
-              />
-              <Input
-                type="time"
-                value={scheduleTime}
-                onChange={(event) => setScheduleTime(event.target.value)}
-              />
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button variant="secondary" className="h-10 rounded-lg" onClick={() => setScheduleProduct(null)} type="button">
-                Cancelar
-              </Button>
-              <Button className="h-10 rounded-lg" disabled={!scheduleDate || !scheduleTime} onClick={confirmScheduledProduct} type="button">
-                Confirmar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {cartModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/60 p-4 backdrop-blur-sm">
           <div className="flex max-h-[76vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/70 bg-white shadow-panel">
@@ -1542,7 +1709,7 @@ export function PublicMenu() {
       )}
 
       {mobileCustomerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-navy-900/50 p-3 backdrop-blur-sm xl:hidden">
+        <div className="fixed inset-0 z-50 flex items-end bg-navy-900/50 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
           <div className="max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-white/70 bg-white p-4 shadow-panel">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold text-ink">Área do cliente</h2>

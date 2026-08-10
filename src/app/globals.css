@@ -12,10 +12,8 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(16, 202, 160, 0.12), transparent 34rem),
-    linear-gradient(180deg, #f8fcff 0%, #eef5f8 100%);
-  color: #03152d;
+  background: #FFF8EF;
+  color: #3A1F16;
   min-height: 100vh;
 }
 
@@ -27,7 +25,7 @@ textarea {
 }
 
 ::selection {
-  background: rgba(16, 202, 160, 0.22);
+  background: rgba(212, 167, 44, 0.25);
 }
 
 .scrollbar-clean {
