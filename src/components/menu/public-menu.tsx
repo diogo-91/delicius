@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { GoogleIcon } from "@/components/auth/google-icon";
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
-import { MenuHero, getHeroProduct } from "@/components/menu/menu-hero";
 import { generateAvailableSlots, type Slot } from "@/lib/menu/slots";
 import { getCrossSellProducts, getHighlightProducts } from "@/lib/menu/highlights";
 import { SocialProof } from "@/components/menu/social-proof";
@@ -420,11 +419,7 @@ export function PublicMenu() {
     [categories, products]
   );
 
-  const heroProduct = useMemo(() => getHeroProduct(categories, products), [categories, products]);
-  const highlightProducts = useMemo(
-    () => getHighlightProducts(categories, products, heroProduct ? [heroProduct.id] : []),
-    [categories, products, heroProduct]
-  );
+  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, []), [categories, products]);
   const crossSellProducts = useMemo(
     () => getCrossSellProducts(categories, products, cart.map((item) => item.productId)),
     [categories, products, cart]
@@ -1279,16 +1274,13 @@ export function PublicMenu() {
         </div>
       </header>
 
-      <MenuHero
-        restaurant={restaurant}
-        displayName={displayName}
-        heroProduct={heroProduct}
-        quantityInCart={heroProduct ? getCartQuantity(heroProduct) : 0}
-        onAdd={() => heroProduct && incrementProduct(heroProduct)}
-        onIncrement={() => heroProduct && incrementProduct(heroProduct)}
-        onDecrement={() => heroProduct && decrementProduct(heroProduct)}
-        onOpenInfo={() => setInfoModalOpen(true)}
-      />
+      <section className="mx-auto mt-2 w-full max-w-[1500px] px-4 md:mt-4 xl:w-[94%]">
+        <img
+          src={restaurant.bannerUrl ?? "/banner.png"}
+          alt="Banner promocional"
+          className="aspect-[5/1] max-h-[300px] w-full rounded-2xl bg-slate-100 object-cover"
+        />
+      </section>
 
       <nav className="sticky top-[150px] z-20 mt-4 w-full overflow-x-auto bg-paper py-3 md:top-[102px]">
         <div className="mx-auto flex w-max min-w-full gap-2 px-4 xl:w-[94%]">
