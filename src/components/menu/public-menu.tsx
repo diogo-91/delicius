@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, Clock, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { CalendarDays, Check, Clock, CreditCard, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, createOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -17,7 +17,7 @@ import { GoogleIcon } from "@/components/auth/google-icon";
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
 import { generateAvailableSlots, type Slot } from "@/lib/menu/slots";
 import { getCrossSellProducts, getHighlightProducts } from "@/lib/menu/highlights";
-import { SocialProof } from "@/components/menu/social-proof";
+import { SocialProof, placeholderReviews } from "@/components/menu/social-proof";
 
 const categoryIcons = [Gift, Star, Flame, Sparkles, Utensils, Utensils, ShoppingBag, ShoppingBag];
 const menuSlug = "delicious-gourmet-bolos-e-salgados";
@@ -1371,8 +1371,6 @@ export function PublicMenu() {
             </div>
           )}
 
-          {activeCategory === "all" && <SocialProof />}
-
           {menuLoading && (
             <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -1478,6 +1476,111 @@ export function PublicMenu() {
           </div>
         </section>
       </div>
+
+      <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pb-8 xl:w-[94%]">
+        <SocialProof reviews={placeholderReviews} products={products} />
+
+        {crossSellProducts.length > 0 && (
+          <div className="rounded-2xl border border-line2 bg-paper p-5">
+            <p className="font-display text-lg font-semibold text-ink2">Combine com ❤️</p>
+            <p className="mt-0.5 text-sm text-muted2">Complete seu pedido e torne o momento ainda mais especial</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {crossSellProducts.map((product) => (
+                <div key={product.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white p-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <img src={product.imageUrl} alt={product.name} className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-ink2">{product.name}</p>
+                      <p className="text-sm text-muted2">+ {formatCurrency(product.variations[0]?.price ?? product.price)}</p>
+                    </div>
+                  </div>
+                  <button
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cta text-white disabled:opacity-40"
+                    disabled={getAvailableStock(product) <= 0}
+                    onClick={() => incrementProduct(product)}
+                    type="button"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-y border-line2 bg-white">
+        <div className="mx-auto grid w-full max-w-[1500px] grid-cols-2 gap-4 px-4 py-5 xl:w-[94%] sm:grid-cols-4">
+          <div className="flex items-start gap-2">
+            <CreditCard className="h-5 w-5 shrink-0 text-gold" />
+            <div>
+              <p className="text-xs font-semibold text-ink2">Formas de pagamento</p>
+              <p className="text-xs text-muted2">Pix, crédito, débito</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="h-5 w-5 shrink-0 text-gold" />
+            <div>
+              <p className="text-xs font-semibold text-ink2">Ambiente seguro</p>
+              <p className="text-xs text-muted2">Seus dados protegidos</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Check className="h-5 w-5 shrink-0 text-gold" />
+            <div>
+              <p className="text-xs font-semibold text-ink2">Compra 100% segura</p>
+              <p className="text-xs text-muted2">Seus pedidos protegidos</p>
+            </div>
+          </div>
+          <a className="flex items-start gap-2" href={`https://wa.me/${restaurant.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+            <WhatsAppIcon className="h-5 w-5 shrink-0 text-emerald-600" />
+            <div>
+              <p className="text-xs font-semibold text-ink2">Precisa de ajuda?</p>
+              <p className="text-xs text-muted2">Fale conosco no WhatsApp</p>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <footer className="bg-[#3A1F16] text-white/80">
+        <div className="mx-auto grid w-full max-w-[1500px] gap-8 px-4 py-8 xl:w-[94%] sm:grid-cols-3">
+          <div>
+            <div className="flex flex-col items-start leading-none">
+              <Crown className="h-3.5 w-3.5 text-white" strokeWidth={1.5} />
+              <span className="font-display text-xl italic text-white">{wordmarkName}</span>
+              {wordmarkSubtitle && <span className="mt-1 border-t border-white/40 pt-0.5 text-[9px] font-semibold tracking-[0.35em] text-white">{wordmarkSubtitle}</span>}
+            </div>
+            <p className="mt-3 max-w-xs text-xs leading-5 text-white/60">Bolos, doces e salgados artesanais feitos para tornar seus momentos inesquecíveis.</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Cardápio</p>
+            <div className="mt-3 space-y-2 text-sm">
+              <button className="block text-white/70 hover:text-white" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} type="button">
+                Ver cardápio
+              </button>
+              <a className="block text-white/70 hover:text-white" href={`https://wa.me/${restaurant.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                Fale conosco
+              </a>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Informações</p>
+            <div className="mt-3 space-y-2 text-sm text-white/70">
+              <p className="flex items-start gap-2">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{openingHours.join(" • ")}</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                {restaurant.address}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/40">
+          © {now.getFullYear()} {displayName}. Todos os direitos reservados.
+        </div>
+      </footer>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 xl:hidden">
         <div className="mx-auto grid max-w-sm grid-cols-[1fr_1.08fr_1fr] gap-1 rounded-[22px] border border-white/80 bg-white/95 p-1 shadow-[0_-4px_18px_rgba(79,38,24,0.08)] backdrop-blur-xl">
