@@ -1281,7 +1281,7 @@ export function PublicMenu() {
       </section>
 
       <nav className="sticky top-[150px] z-20 mt-4 w-full overflow-x-auto bg-paper py-3 md:top-[102px]">
-        <div className="mx-auto flex w-max min-w-full gap-2 px-4 xl:w-[94%]">
+        <div className="mx-auto flex w-max min-w-full justify-center gap-2 px-4 xl:w-[94%]">
           <button
             className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
               activeCategory === "all" ? "border border-line2 bg-white text-ink2 shadow-sm" : "border border-transparent text-muted2 hover:text-ink2"
