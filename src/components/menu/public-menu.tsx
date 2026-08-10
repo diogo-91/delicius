@@ -1478,7 +1478,7 @@ export function PublicMenu() {
       </div>
 
       <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pb-8 xl:w-[94%]">
-        <SocialProof reviews={placeholderReviews} products={products} />
+        <SocialProof reviews={placeholderReviews} products={products} excludeIds={highlightProducts.map((product) => product.id)} />
 
         {crossSellProducts.length > 0 && (
           <div className="rounded-2xl border border-line2 bg-paper p-5">
