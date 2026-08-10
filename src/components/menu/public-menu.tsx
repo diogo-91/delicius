@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronDown, Clock, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { CalendarDays, Check, Clock, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, createOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -235,7 +235,6 @@ export function PublicMenu() {
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const [historyOrder, setHistoryOrder] = useState<Order | null>(null);
-  const [customerPanelOpen, setCustomerPanelOpen] = useState(false);
   const [mobileCustomerOpen, setMobileCustomerOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "approved">("idle");
@@ -1313,8 +1312,8 @@ export function PublicMenu() {
         </div>
       </nav>
 
-      <div className="mx-auto grid w-full max-w-[1500px] gap-5 px-4 py-3 md:py-6 xl:w-[94%] xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="min-w-0 space-y-6 pb-12 xl:pr-5">
+      <div className="mx-auto grid w-full max-w-[1500px] gap-5 px-4 py-3 md:py-6 xl:w-[94%]">
+        <section className="min-w-0 space-y-6 pb-12">
           {!storeAcceptingOrders && (
             <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
               <strong className="font-semibold">Pedidos indisponíveis no momento.</strong>
@@ -1484,157 +1483,6 @@ export function PublicMenu() {
             ))}
           </div>
         </section>
-
-        <aside className="hidden flex-col gap-3 xl:flex xl:sticky xl:top-[186px] xl:max-h-[calc(100dvh-206px)] xl:self-start">
-          <div className="scrollbar-clean min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/70 bg-white/75 p-3 shadow-soft backdrop-blur-xl ring-1 ring-white/70 xl:pr-4">
-            <div className="mb-3 rounded-xl border border-line/80 bg-white/70 p-2.5">
-              <button
-                className="flex w-full items-center justify-between gap-3 text-left"
-                onClick={() => setCustomerPanelOpen((current) => !current)}
-                type="button"
-              >
-                <span>
-                  <span className="block text-sm font-semibold text-ink">Área do cliente</span>
-                  <span className="mt-0.5 block truncate text-xs text-muted">
-                    {customerIsAuthenticated ? user?.user_metadata?.full_name ?? user?.email ?? signupForm.email : "Entre ou crie uma conta"}
-                  </span>
-                </span>
-                <ChevronDown className={`h-4 w-4 shrink-0 text-muted transition ${customerPanelOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {customerPanelOpen && customerIsAuthenticated ? (
-                <div className="mt-3 space-y-2">
-                  <p className="truncate text-xs text-muted">{user?.user_metadata?.full_name ?? user?.email ?? signupForm.email}</p>
-                  <div className="rounded-lg bg-brand-50 p-2 text-xs text-brand-700">
-                    Seu histórico de pedidos ficará vinculado a esta conta.
-                  </div>
-                  <div className="rounded-lg border border-line bg-white/70 p-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold text-ink">Dados do cliente</p>
-                      <button className="text-xs font-semibold text-brand-700" onClick={() => setProfileEditing((current) => !current)} type="button">
-                        {profileEditing ? "Fechar" : "Editar"}
-                      </button>
-                    </div>
-                    {profileEditing ? (
-                      <div className="mt-2 space-y-2">
-                        <Input className="h-9 text-xs" placeholder="Nome completo" value={customerProfile.name} onChange={(event) => updateCustomerProfile({ ...customerProfile, name: event.target.value })} />
-                        <Input className="h-9 text-xs" placeholder="Telefone/WhatsApp" value={customerProfile.phone} onChange={(event) => updateCustomerProfile({ ...customerProfile, phone: event.target.value })} />
-                        <div className="grid grid-cols-[minmax(0,1fr)_70px] gap-2">
-                          <Input className="h-9 text-xs" placeholder="Rua / Avenida" value={customerProfile.street} onChange={(event) => updateCustomerProfile({ ...customerProfile, street: event.target.value })} />
-                          <Input className="h-9 text-xs" placeholder="Nº" value={customerProfile.number} onChange={(event) => updateCustomerProfile({ ...customerProfile, number: event.target.value })} />
-                        </div>
-                        <Input className="h-9 text-xs" placeholder="Bairro" value={customerProfile.neighborhood} onChange={(event) => updateCustomerProfile({ ...customerProfile, neighborhood: event.target.value })} />
-                        <Input className="h-9 text-xs" placeholder="Complemento" value={customerProfile.complement} onChange={(event) => updateCustomerProfile({ ...customerProfile, complement: event.target.value })} />
-                        <Textarea className="min-h-16 text-xs" placeholder="Ponto de referência ou observação" value={customerProfile.reference} onChange={(event) => updateCustomerProfile({ ...customerProfile, reference: event.target.value })} />
-                        <Button className="h-9 w-full rounded-lg text-xs" onClick={saveCustomerProfile} type="button">
-                          Salvar dados
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="mt-2 space-y-1 text-xs text-muted">
-                        <p>{customerProfile.name || "Nome nao informado"}</p>
-                        <p>{customerProfile.phone || "Telefone nao informado"}</p>
-                        <p className="line-clamp-2">{formatCustomerAddress(customerProfile) || "Endereco nao informado"}</p>
-                      </div>
-                    )}
-                    {profileMessage && <p className="mt-2 text-xs text-brand-700">{profileMessage}</p>}
-                  </div>
-                  {customerHistory.length > 0 && (
-                    <div className="space-y-2 rounded-lg border border-line bg-white/70 p-2">
-                      <p className="text-xs font-semibold text-ink">Últimos pedidos</p>
-                      {customerHistory.map((order) => (
-                        <button
-                          key={order.id}
-                          className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left text-xs text-muted transition hover:bg-brand-50 hover:text-ink"
-                          onClick={() => setHistoryOrder(order)}
-                          type="button"
-                        >
-                          <span>
-                            <span className="block font-medium underline-offset-2 hover:underline">{order.code}</span>
-                            <span className="text-[11px] text-muted">{orderStatusLabels[order.status]}</span>
-                          </span>
-                          <strong className="text-ink">{formatCurrency(order.total)}</strong>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <Button variant="secondary" className="h-9 w-full rounded-lg text-xs" onClick={signOut} type="button">
-                    Sair da conta
-                  </Button>
-                </div>
-              ) : customerPanelOpen ? (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs leading-4 text-muted">Entre ou crie uma conta para acompanhar seus pedidos.</p>
-                  <Button variant="secondary" className="h-9 w-full rounded-lg text-xs" onClick={() => setAuthModalOpen(true)} type="button">
-                    Fazer login
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mb-3 overflow-hidden rounded-2xl border border-white/70 bg-white/75 shadow-panel backdrop-blur-xl ring-1 ring-white/70">
-              <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <ShoppingBag className="h-4 w-4 text-brand-600" />
-                  Sua Sacola
-                </h2>
-                <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">{cart.length}</span>
-              </div>
-              <div className="space-y-3 p-3">
-                <div className="rounded-xl border border-line bg-white/70 p-3">
-                  <p className="text-sm font-semibold text-ink">
-                    {createdOrder ? "Pedido recebido" : cart.length === 1 ? "1 item na sacola" : `${cart.length} itens na sacola`}
-                  </p>
-                  <p className="mt-1 text-xs text-muted">
-                    {createdOrder ? `Codigo ${createdOrder.code}` : cart.length > 0 ? `Subtotal ${formatCurrency(subtotal)}` : "Adicione produtos para continuar."}
-                  </p>
-                </div>
-                <Button className="h-10 w-full rounded-xl" onClick={openCart} type="button">
-                  Ver Sacola
-                </Button>
-              </div>
-            </div>
-
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink">
-                <Sparkles className="h-4 w-4 text-brand-600" />
-                Filtros
-              </h2>
-              <Button variant="ghost" className="h-7 px-2 text-xs" onClick={() => setActiveCategory("all")} type="button">
-                Limpar
-              </Button>
-            </div>
-            <div className="space-y-1.5">
-              <button
-                className={`flex h-8 w-full items-center gap-2 rounded-lg px-3 text-left text-[11px] font-semibold uppercase tracking-wide transition ${activeCategory === "all" ? "bg-brand-600 text-white shadow-soft" : "border border-line bg-white text-muted hover:border-brand-500 hover:text-ink"}`}
-                onClick={() => setActiveCategory("all")}
-                type="button"
-              >
-                <Flame className={`h-3.5 w-3.5 ${activeCategory === "all" ? "text-white" : "text-brand-600"}`} />
-                Ver tudo
-              </button>
-              {categoriesWithProducts.map((category, index) => {
-                const Icon = categoryIcons[index] ?? Utensils;
-                const active = activeCategory === category.id;
-                return (
-                  <button
-                    key={category.id}
-                    className={`flex h-8 w-full items-center gap-2 rounded-lg px-3 text-left text-[11px] font-semibold uppercase tracking-wide transition ${active ? "bg-brand-600 text-white shadow-soft" : "border border-line bg-white text-muted hover:border-brand-500 hover:text-ink"}`}
-                    onClick={() => setActiveCategory(category.id)}
-                    type="button"
-                  >
-                    <Icon className={`h-3.5 w-3.5 ${active ? "text-white" : "text-brand-600"}`} />
-                    {category.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <footer className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-center text-xs text-muted shadow-soft backdrop-blur-xl ring-1 ring-white/70">
-            Desenvolvido por <span className="font-semibold text-brand-700">Komanda Menu</span>
-          </footer>
-        </aside>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 xl:hidden">
