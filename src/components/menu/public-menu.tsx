@@ -1321,10 +1321,12 @@ export function PublicMenu() {
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
                 {highlightProducts.map((product) => (
-                  <div key={product.id} className="rounded-2xl border border-line2 bg-white p-2">
+                  <div key={product.id} className="flex h-full flex-col rounded-2xl border border-line2 bg-white p-2">
                     <img src={product.imageUrl} alt={product.name} className="aspect-square w-full rounded-xl object-cover" />
-                    <p className="mt-2 line-clamp-2 text-sm font-semibold leading-tight text-ink2">{product.name}</p>
-                    <strong className="mt-1 block text-sm font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
+                    <div className="flex flex-1 flex-col">
+                      <p className="mt-2 line-clamp-2 text-sm font-semibold leading-tight text-ink2">{product.name}</p>
+                      <strong className="mt-1 block text-sm font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
+                    </div>
                     {getCartQuantity(product) === 0 ? (
                       <Button
                         variant="cta"
