@@ -443,7 +443,11 @@ export function PublicMenu() {
     [categories, products]
   );
 
-  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, [], 10), [categories, products]);
+  const heroProduct = useMemo(() => getHighlightProducts(categories, products, [], 1)[0] ?? null, [categories, products]);
+  const highlightProducts = useMemo(
+    () => getHighlightProducts(categories, products, heroProduct ? [heroProduct.id] : [], 10),
+    [categories, products, heroProduct]
+  );
   const highlightsLoop = useMemo(() => [...highlightProducts, ...highlightProducts], [highlightProducts]);
 
   useEffect(() => {
@@ -1248,6 +1252,31 @@ export function PublicMenu() {
 
   return (
     <main className="min-h-screen bg-[#f7f2ed] pb-24 text-ink md:bg-[#f5f6f8] xl:pb-12">
+      <div className="hidden bg-ink2 md:block">
+        <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-2 text-[11px] font-medium text-white/90 xl:w-[80%]">
+          <div className="flex items-center gap-6">
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-gold" />
+              Retirada e entrega local
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Gift className="h-3.5 w-3.5 text-gold" />
+              Feito com ingredientes selecionados
+            </span>
+          </div>
+          <div className="flex items-center gap-6">
+            <span className="flex items-center gap-1.5">
+              <Send className="h-3.5 w-3.5 text-gold" />
+              Atendimento humanizado
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CreditCard className="h-3.5 w-3.5 text-gold" />
+              Pagamento 100% seguro
+            </span>
+          </div>
+        </div>
+      </div>
+
       <header className="sticky top-0 z-30 border-b border-line2 bg-white">
         <div className="mx-auto flex w-full max-w-[1500px] items-center gap-3 px-4 py-3 xl:w-[80%]">
           <div className="flex shrink-0 flex-col items-center leading-none">
@@ -1319,27 +1348,111 @@ export function PublicMenu() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 border-t border-line2 px-4 py-2 xl:px-[3%]">
-          <span className={`flex items-center gap-1.5 text-xs font-semibold ${storeAcceptingOrders ? "text-emerald-700" : "text-red-700"}`}>
-            <span className={`h-2 w-2 rounded-full ${storeAcceptingOrders ? "bg-emerald-500" : "bg-red-500"}`} />
-            {storeAcceptingOrders ? "Aberto agora" : "Fechado agora"}
-            {storeAcceptingOrders && todaySchedule && ` • Fecha às ${formatScheduleTime(todaySchedule.close)}`}
-          </span>
-          <button className="text-xs font-medium text-muted2 underline-offset-2 hover:underline" onClick={() => setInfoModalOpen(true)} type="button">
-            Endereço e horários
-          </button>
+        <div className="border-t border-line2">
+          <div className="mx-auto flex w-full max-w-[1500px] flex-wrap items-center justify-between gap-3 px-4 py-2 xl:w-[80%]">
+            <div className="flex items-center gap-2">
+              <span className={`flex items-center gap-1.5 text-xs font-semibold ${storeAcceptingOrders ? "text-emerald-700" : "text-red-700"}`}>
+                <span className={`h-2 w-2 rounded-full ${storeAcceptingOrders ? "bg-emerald-500" : "bg-red-500"}`} />
+                {storeAcceptingOrders ? "Aberto agora" : "Fechado agora"}
+                {storeAcceptingOrders && todaySchedule && ` • Fecha às ${formatScheduleTime(todaySchedule.close)}`}
+              </span>
+              <button className="text-xs font-medium text-muted2 underline-offset-2 hover:underline" onClick={() => setInfoModalOpen(true)} type="button">
+                Endereço e horários
+              </button>
+            </div>
+            <div className="hidden items-center gap-6 md:flex">
+              <span className="flex items-center gap-2">
+                <Truck className="h-4 w-4 shrink-0 text-gold" />
+                <span className="leading-tight">
+                  <span className="block text-xs font-semibold text-ink2">Entrega rápida e segura</span>
+                  <span className="block text-[11px] text-muted2">Retirada e entrega local</span>
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Heart className="h-4 w-4 shrink-0 text-gold" />
+                <span className="leading-tight">
+                  <span className="block text-xs font-semibold text-ink2">Feito com carinho</span>
+                  <span className="block text-[11px] text-muted2">Qualidade que você sente</span>
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Gift className="h-4 w-4 shrink-0 text-gold" />
+                <span className="leading-tight">
+                  <span className="block text-xs font-semibold text-ink2">Embalagem especial</span>
+                  <span className="block text-[11px] text-muted2">Perfeita para presentear</span>
+                </span>
+              </span>
+            </div>
+          </div>
         </div>
       </header>
 
-      <section className="w-full">
-        <img
-          src={restaurant.bannerUrl ?? "/banner.png"}
-          alt="Banner promocional"
-          className="aspect-[5/1] max-h-[300px] w-full bg-slate-100 object-cover"
-        />
-      </section>
+      {heroProduct ? (
+        <section className="w-full bg-gradient-to-r from-paper to-[#FBEEDD]">
+          <div className="mx-auto grid w-full max-w-[1500px] items-center gap-6 px-4 py-8 md:grid-cols-2 md:gap-10 md:py-12 xl:w-[80%]">
+            <div className="min-w-0">
+              <span className="inline-flex items-center gap-2 font-display text-sm italic text-gold md:text-base">
+                <Crown className="h-4 w-4" strokeWidth={1.5} />O queridinho da {wordmarkName}
+                <Crown className="h-4 w-4" strokeWidth={1.5} />
+              </span>
+              <h1 className="mt-2 break-words font-display text-4xl font-bold uppercase leading-[0.95] text-ink2 md:text-6xl">{heroProduct.name}</h1>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="h-px w-8 bg-gold/50" />
+                <Heart className="h-4 w-4 fill-cta text-cta" />
+                <span className="h-px w-8 bg-gold/50" />
+              </div>
+              {heroProduct.description && <p className="mt-3 max-w-md text-sm text-muted2 md:text-base">{heroProduct.description}</p>}
+              <p className="mt-4 font-display text-3xl font-bold text-cta md:text-4xl">
+                {formatCurrency(heroProduct.variations[0]?.price ?? heroProduct.price)}
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Button
+                  variant="cta"
+                  className="h-12 rounded-xl px-6 text-sm font-bold uppercase tracking-wide"
+                  disabled={getAvailableStock(heroProduct) <= 0}
+                  onClick={() => {
+                    incrementProduct(heroProduct);
+                    openCart();
+                  }}
+                  type="button"
+                >
+                  {getAvailableStock(heroProduct) <= 0 ? "Sem estoque" : "Quero pedir agora"}
+                  {getAvailableStock(heroProduct) > 0 && <Send className="ml-2 h-4 w-4" />}
+                </Button>
+                <span className="flex items-center gap-2 rounded-xl border border-line2 bg-white/70 px-4 py-2.5 text-xs text-ink2">
+                  <ShieldCheck className="h-4 w-4 text-gold" />
+                  <span>
+                    <span className="block font-semibold">Compra segura</span>
+                    <span className="block text-muted2">Ambiente 100% protegido</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div className="relative mx-auto w-full max-w-md md:max-w-none">
+              <img
+                src={heroProduct.imageUrl}
+                alt={heroProduct.name}
+                className="aspect-square w-full rounded-2xl bg-slate-100 object-cover shadow-[0_20px_50px_rgba(58,31,22,0.18)]"
+              />
+              <div className="absolute -right-2 -top-2 flex h-24 w-24 flex-col items-center justify-center rounded-full border border-gold/40 bg-white text-center shadow-md md:h-28 md:w-28">
+                <span className="font-display text-[9px] uppercase tracking-widest text-gold">Receita exclusiva</span>
+                <span className="font-display text-sm italic text-ink2">{wordmarkName}</span>
+                <span className="text-[8px] uppercase tracking-widest text-muted2">Feito com carinho</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="w-full">
+          <img
+            src={restaurant.bannerUrl ?? "/banner.png"}
+            alt="Banner promocional"
+            className="aspect-[5/1] max-h-[300px] w-full bg-slate-100 object-cover"
+          />
+        </section>
+      )}
 
-      <nav className="sticky top-[150px] z-20 w-full overflow-x-auto bg-cta py-3 md:top-[102px]">
+      <nav className="sticky top-[168px] z-20 w-full overflow-x-auto bg-cta py-3 md:top-[135px]">
         <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[80%]">
           <button
             className={`flex shrink-0 items-center gap-2 rounded-full border bg-white px-5 py-3 text-sm font-semibold shadow-sm transition ${
@@ -1375,9 +1488,19 @@ export function PublicMenu() {
         <section className="min-w-0 space-y-6 pb-12">
           {activeCategory === "all" && highlightProducts.length > 0 && (
             <div className="space-y-3">
-              <div>
-                <h2 className="font-display text-xl font-semibold text-ink2 md:text-2xl">Selecionados para você ❤️</h2>
-                <p className="mt-0.5 text-sm text-muted2">Uma seleção especial do nosso cardápio</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-ink2 md:text-2xl">Selecionados para você ❤️</h2>
+                  <p className="mt-0.5 text-sm text-muted2">Uma seleção especial do nosso cardápio, feita para adoçar os seus melhores momentos.</p>
+                </div>
+                <button
+                  className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gold/50 px-4 py-2 text-xs font-semibold text-ink2 transition hover:border-gold hover:bg-gold/10"
+                  onClick={() => document.getElementById("product-grid")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  type="button"
+                >
+                  Ver todos os produtos
+                  <Send className="h-3.5 w-3.5" />
+                </button>
               </div>
               <div
                 className="overflow-hidden"
@@ -1448,7 +1571,7 @@ export function PublicMenu() {
             </div>
           )}
 
-          <div className="space-y-6 md:space-y-8">
+          <div id="product-grid" className="space-y-6 md:space-y-8 scroll-mt-32">
             {visibleCategories.map((category) => (
               <section key={category.id} className="space-y-4 md:space-y-5">
                 {activeCategory === "all" && (
