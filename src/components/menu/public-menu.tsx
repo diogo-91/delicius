@@ -20,7 +20,6 @@ import { getCrossSellProducts, getHighlightProducts } from "@/lib/menu/highlight
 import { SocialProof, placeholderReviews } from "@/components/menu/social-proof";
 
 const categoryIcons = [Gift, Star, Flame, Sparkles, Utensils, Utensils, ShoppingBag, ShoppingBag];
-const categoryIconColors = ["text-cta", "text-gold", "text-orange-500", "text-purple-500", "text-emerald-600", "text-cta", "text-gold", "text-orange-500"];
 const menuSlug = "delicious-gourmet-bolos-e-salgados";
 
 const categoryHeaderBadges = [
@@ -1391,32 +1390,32 @@ export function PublicMenu() {
         />
       </section>
 
-      <nav className="sticky top-[168px] z-20 w-full overflow-x-auto bg-cta py-3 md:top-[135px]">
+      <nav className="sticky top-[168px] z-20 w-full overflow-x-auto border-b border-line2 bg-paper py-3 md:top-[135px]">
         <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[80%]">
           <button
-            className={`flex shrink-0 items-center gap-2 rounded-full border bg-white px-5 py-3 text-sm font-semibold shadow-sm transition ${
-              activeCategory === "all" ? "border-gold shadow-md" : "border-line2 hover:border-gold/60"
+            className={`flex shrink-0 items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold shadow-sm transition ${
+              activeCategory === "all" ? "border-cta bg-cta text-gold shadow-md" : "border-line2 bg-white text-ink2 hover:border-gold/60"
             }`}
             onClick={() => setActiveCategory("all")}
             type="button"
           >
-            <Star className="h-4 w-4 fill-gold text-gold" />
-            <span className="text-ink2">Destaques</span>
+            <Star className={`h-4 w-4 ${activeCategory === "all" ? "text-gold" : "text-cta"}`} />
+            <span>Destaques</span>
           </button>
           {categoriesWithProducts.map((category, index) => {
             const Icon = categoryIcons[index % categoryIcons.length];
-            const iconColor = categoryIconColors[index % categoryIconColors.length];
+            const isActive = activeCategory === category.id;
             return (
               <button
                 key={category.id}
-                className={`flex shrink-0 items-center gap-2 rounded-full border bg-white px-5 py-3 text-sm font-semibold shadow-sm transition ${
-                  activeCategory === category.id ? "border-gold shadow-md" : "border-line2 hover:border-gold/60"
+                className={`flex shrink-0 items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold shadow-sm transition ${
+                  isActive ? "border-cta bg-cta text-gold shadow-md" : "border-line2 bg-white text-ink2 hover:border-gold/60"
                 }`}
                 onClick={() => setActiveCategory(category.id)}
                 type="button"
               >
-                <Icon className={`h-4 w-4 ${iconColor}`} />
-                <span className="text-ink2">{category.name}</span>
+                <Icon className={`h-4 w-4 ${isActive ? "text-gold" : "text-cta"}`} />
+                <span>{category.name}</span>
               </button>
             );
           })}
