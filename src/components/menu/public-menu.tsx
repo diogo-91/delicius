@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, Clock, CreditCard, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { CalendarDays, Check, Clock, CreditCard, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, createOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -20,6 +20,7 @@ import { getCrossSellProducts, getHighlightProducts } from "@/lib/menu/highlight
 import { SocialProof, placeholderReviews } from "@/components/menu/social-proof";
 
 const categoryIcons = [Gift, Star, Flame, Sparkles, Utensils, Utensils, ShoppingBag, ShoppingBag];
+const categoryIconColors = ["text-cta", "text-gold", "text-orange-500", "text-purple-500", "text-emerald-600", "text-cta", "text-gold", "text-orange-500"];
 const menuSlug = "delicious-gourmet-bolos-e-salgados";
 
 const benefits = [
@@ -52,6 +53,7 @@ const defaultCustomer = {
 const customerProfileStorageKey = "kamanda.delicious.customer-profile";
 const cartStorageKey = "kamanda.delicious.cart";
 const reopenCartStorageKey = "kamanda.delicious.reopen-cart";
+const favoritesStorageKey = "kamanda.delicious.favorites";
 
 type CustomerForm = typeof defaultCustomer;
 
@@ -60,6 +62,16 @@ function readSavedCart(): CartItem[] {
   try {
     const raw = window.localStorage.getItem(cartStorageKey);
     return raw ? (JSON.parse(raw) as CartItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function readSavedFavorites(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(favoritesStorageKey);
+    return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
     return [];
   }
@@ -215,6 +227,7 @@ export function PublicMenu() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>(readSavedCart);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(readSavedFavorites);
   const [coupons, setCoupons] = useState<Coupon[]>(getCoupons());
   const [ordersSnapshot, setOrdersSnapshot] = useState<Order[]>(getOrders());
   const [customer, setCustomer] = useState<CustomerForm>(defaultCustomer);
@@ -268,6 +281,10 @@ export function PublicMenu() {
   useEffect(() => {
     window.localStorage.setItem(cartStorageKey, JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    window.localStorage.setItem(favoritesStorageKey, JSON.stringify(favoriteIds));
+  }, [favoriteIds]);
 
   useEffect(() => {
     if (window.localStorage.getItem(reopenCartStorageKey) === "1") {
@@ -557,6 +574,10 @@ export function PublicMenu() {
         ? current.filter((_, itemIndex) => itemIndex !== index)
         : current.map((item, itemIndex) => (itemIndex === index ? { ...item, quantity: nextQuantity } : item));
     });
+  }
+
+  function toggleFavorite(productId: string) {
+    setFavoriteIds((current) => (current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId]));
   }
 
   function updateQuantity(index: number, quantity: number) {
@@ -1313,30 +1334,31 @@ export function PublicMenu() {
       </section>
 
       <nav className="sticky top-[150px] z-20 mt-4 w-full overflow-x-auto bg-paper py-3 md:top-[102px]">
-        <div className="mx-auto flex w-max min-w-full justify-center gap-2 px-4 xl:w-[94%]">
+        <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[94%]">
           <button
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-              activeCategory === "all" ? "border border-line2 bg-white text-ink2 shadow-sm" : "border border-transparent text-muted2 hover:text-ink2"
+            className={`flex shrink-0 items-center gap-2 rounded-full border bg-white px-5 py-3 text-sm font-semibold shadow-sm transition ${
+              activeCategory === "all" ? "border-gold shadow-md" : "border-line2 hover:border-gold/60"
             }`}
             onClick={() => setActiveCategory("all")}
             type="button"
           >
-            <Star className={`h-4 w-4 ${activeCategory === "all" ? "fill-gold text-gold" : ""}`} />
-            Destaques
+            <Star className="h-4 w-4 fill-gold text-gold" />
+            <span className="text-ink2">Destaques</span>
           </button>
           {categoriesWithProducts.map((category, index) => {
             const Icon = categoryIcons[index % categoryIcons.length];
+            const iconColor = categoryIconColors[index % categoryIconColors.length];
             return (
               <button
                 key={category.id}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  activeCategory === category.id ? "border border-line2 bg-white text-ink2 shadow-sm" : "border border-transparent text-muted2 hover:text-ink2"
+                className={`flex shrink-0 items-center gap-2 rounded-full border bg-white px-5 py-3 text-sm font-semibold shadow-sm transition ${
+                  activeCategory === category.id ? "border-gold shadow-md" : "border-line2 hover:border-gold/60"
                 }`}
                 onClick={() => setActiveCategory(category.id)}
                 type="button"
               >
-                <Icon className={`h-4 w-4 ${activeCategory === category.id ? "text-gold" : ""}`} />
-                {category.name}
+                <Icon className={`h-4 w-4 ${iconColor}`} />
+                <span className="text-ink2">{category.name}</span>
               </button>
             );
           })}
@@ -1443,9 +1465,9 @@ export function PublicMenu() {
                   {category.products.map((product, index) => (
                     <article
                       key={product.id}
-                      className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-line2 bg-white p-1 shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md"
+                      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line2 bg-white shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-lg"
                     >
-                      <div className="relative aspect-square w-full overflow-hidden rounded bg-paper">
+                      <div className="relative aspect-square w-full overflow-hidden bg-paper">
                         <img
                           src={product.imageUrl}
                           alt={product.name}
@@ -1454,24 +1476,32 @@ export function PublicMenu() {
                           className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                         />
                         {category.id === "cat_promocao" && index === 0 && (
-                          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-cta text-[10px] font-semibold text-white shadow-[0_6px_14px_rgba(79,38,24,0.16)]">
+                          <span className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-cta text-xs font-semibold text-white shadow-[0_6px_14px_rgba(79,38,24,0.16)]">
                             1
                           </span>
                         )}
+                        <button
+                          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink2 shadow-md backdrop-blur transition hover:bg-white"
+                          onClick={() => toggleFavorite(product.id)}
+                          aria-label={favoriteIds.includes(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                          type="button"
+                        >
+                          <Heart className={`h-4 w-4 ${favoriteIds.includes(product.id) ? "fill-cta text-cta" : "text-ink2"}`} />
+                        </button>
                       </div>
-                      <div className="flex flex-1 flex-col pt-1">
-                        <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-ink2">{product.name}</h3>
-                        <p className="mt-0.5 hidden line-clamp-1 text-xs leading-4 text-muted2 md:block">{product.description}</p>
-                        <div className="mt-0.5 flex flex-1 items-end justify-between gap-2">
-                          <strong className="text-sm font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
-                          <span className={`shrink-0 text-[10px] font-semibold ${getAvailableStock(product) > 0 ? "text-muted2" : "text-red-700"}`}>
+                      <div className="flex flex-1 flex-col p-4">
+                        <h3 className="line-clamp-2 text-base font-semibold leading-tight text-ink2">{product.name}</h3>
+                        <p className="mt-1 line-clamp-1 text-sm text-muted2">{product.description}</p>
+                        <div className="mt-3 flex flex-1 items-end justify-between gap-2 border-t border-line2 pt-3">
+                          <strong className="text-xl font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
+                          <span className={`shrink-0 text-xs font-semibold ${getAvailableStock(product) > 0 ? "text-muted2" : "text-red-700"}`}>
                             {getAvailableStock(product) > 0 ? `${getAvailableStock(product)} disponível` : "Indisponível"}
                           </span>
                         </div>
                         {getCartQuantity(product) === 0 ? (
                           <Button
                             variant="cta"
-                            className="mt-1 h-6 min-h-0 w-full rounded text-[11px] font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97]"
+                            className="mt-3 h-11 w-full rounded-xl text-sm font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97]"
                             disabled={getAvailableStock(product) <= 0}
                             type="button"
                             onClick={() => incrementProduct(product)}
@@ -1480,28 +1510,28 @@ export function PublicMenu() {
                               "Sem estoque"
                             ) : (
                               <>
-                                <Plus className="h-3 w-3" />
+                                <ShoppingCart className="h-4 w-4" />
                                 Adicionar
                               </>
                             )}
                           </Button>
                         ) : (
-                          <div className="mt-1 flex h-6 w-full items-center justify-between rounded bg-paper px-1">
+                          <div className="mt-3 flex h-11 w-full items-center justify-between rounded-xl bg-paper px-2">
                             <button
-                              className="flex h-4 w-4 items-center justify-center rounded-sm bg-white text-ink2 shadow-sm"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-ink2 shadow-sm"
                               onClick={() => decrementProduct(product)}
                               type="button"
                             >
-                              <Minus className="h-2.5 w-2.5" />
+                              <Minus className="h-4 w-4" />
                             </button>
-                            <span className="text-[11px] font-bold text-ink2">{getCartQuantity(product)}</span>
+                            <span className="text-base font-bold text-ink2">{getCartQuantity(product)}</span>
                             <button
-                              className="flex h-4 w-4 items-center justify-center rounded-sm bg-white text-ink2 shadow-sm disabled:opacity-40"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-ink2 shadow-sm disabled:opacity-40"
                               disabled={getAvailableStock(product) <= 0}
                               onClick={() => incrementProduct(product)}
                               type="button"
                             >
-                              <Plus className="h-2.5 w-2.5" />
+                              <Plus className="h-4 w-4" />
                             </button>
                           </div>
                         )}
