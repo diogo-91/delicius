@@ -250,6 +250,8 @@ export function PublicMenu() {
   const [guestSavePromptDismissed, setGuestSavePromptDismissed] = useState(false);
   const remoteMenuLoadedRef = useRef(false);
   const remoteOrdersLoadedRef = useRef(false);
+  const highlightsScrollRef = useRef<HTMLDivElement>(null);
+  const highlightsPausedRef = useRef(false);
   const [cardForm, setCardForm] = useState({
     holder: "",
     number: "",
@@ -418,7 +420,29 @@ export function PublicMenu() {
     [categories, products]
   );
 
-  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, [], 5), [categories, products]);
+  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, [], 10), [categories, products]);
+
+  useEffect(() => {
+    const el = highlightsScrollRef.current;
+    if (!el) return;
+
+    const interval = window.setInterval(() => {
+      if (highlightsPausedRef.current) return;
+      const card = el.firstElementChild as HTMLElement | null;
+      const step = (card?.offsetWidth ?? 176) + 12;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+
+      if (maxScroll <= 0) return;
+
+      if (el.scrollLeft >= maxScroll - 2) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollTo({ left: el.scrollLeft + step, behavior: "smooth" });
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [highlightProducts.length]);
   const crossSellProducts = useMemo(
     () => getCrossSellProducts(categories, products, cart.map((item) => item.productId)),
     [categories, products, cart]
@@ -1319,9 +1343,18 @@ export function PublicMenu() {
                 <h2 className="font-display text-xl font-semibold text-ink2 md:text-2xl">Selecionados para você ❤️</h2>
                 <p className="mt-0.5 text-sm text-muted2">Uma seleção especial do nosso cardápio</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+              <div
+                ref={highlightsScrollRef}
+                className="scrollbar-clean flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1"
+                onMouseEnter={() => (highlightsPausedRef.current = true)}
+                onMouseLeave={() => (highlightsPausedRef.current = false)}
+                onTouchStart={() => (highlightsPausedRef.current = true)}
+              >
                 {highlightProducts.map((product) => (
-                  <div key={product.id} className="flex h-full flex-col rounded-2xl border border-line2 bg-white p-2">
+                  <div
+                    key={product.id}
+                    className="flex h-full w-[42vw] shrink-0 snap-start flex-col rounded-2xl border border-line2 bg-white p-2 transition duration-200 hover:-translate-y-1 hover:border-cta/40 hover:shadow-lg sm:w-[220px]"
+                  >
                     <img src={product.imageUrl} alt={product.name} className="aspect-square w-full rounded-xl object-cover" />
                     <div className="flex flex-1 flex-col">
                       <p className="mt-2 line-clamp-2 text-sm font-semibold leading-tight text-ink2">{product.name}</p>
