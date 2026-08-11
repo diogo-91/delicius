@@ -1441,40 +1441,37 @@ export function PublicMenu() {
 
                 <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
                   {category.products.map((product, index) => (
-                    <article key={product.id} className="group relative grid grid-cols-1 overflow-hidden rounded-3xl bg-white p-1.5 shadow-[0_6px_18px_rgba(79,38,24,0.05)] transition duration-200 motion-reduce:transition-none active:scale-[0.985] motion-safe:hover:-translate-y-0.5 md:min-h-[190px] md:rounded-2xl md:border md:border-slate-200 md:p-3 md:shadow-sm md:hover:border-brand-100 md:hover:shadow-soft lg:grid-cols-[160px_minmax(0,1fr)] 2xl:grid-cols-[180px_minmax(0,1fr)]">
-                      <div className="relative flex items-center justify-center rounded-[22px] bg-[#F8F4EF] md:rounded-xl md:bg-slate-50">
-                        <div className="aspect-[1.32/1] w-full overflow-hidden rounded-[22px] bg-white shadow-[0_3px_8px_rgba(79,38,24,0.04)] ring-1 ring-black/[0.025] md:aspect-square md:rounded-xl md:shadow-none md:ring-slate-100">
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            width={1080}
-                            height={1080}
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                          />
-                        </div>
+                    <article
+                      key={product.id}
+                      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line2 bg-white p-2 shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md md:p-3"
+                    >
+                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-paper">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          width={1080}
+                          height={1080}
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                        />
                         {category.id === "cat_promocao" && index === 0 && (
-                          <span className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white shadow-[0_6px_14px_rgba(79,38,24,0.16)] md:text-sm">
+                          <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-cta text-xs font-semibold text-white shadow-[0_6px_14px_rgba(79,38,24,0.16)]">
                             1
                           </span>
                         )}
                       </div>
-                      <div className="flex min-w-0 flex-1 flex-col px-1.5 pb-1.5 pt-2 md:px-4 md:py-2">
-                        <div className="flex flex-1 flex-col">
-                          <div>
-                            <h3 className="line-clamp-2 text-base font-semibold leading-[1.22] text-ink md:text-base md:leading-5">{product.name}</h3>
-                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                              <strong className="text-[20px] font-bold leading-none text-brand-700 md:inline-flex md:rounded-full md:bg-brand-50 md:px-2.5 md:py-1 md:text-sm md:font-semibold">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
-                              <span className={`hidden rounded-full px-2.5 py-1 text-xs font-semibold md:inline-flex ${getAvailableStock(product) > 0 ? "bg-slate-100 text-muted" : "bg-red-50 text-red-700"}`}>
-                                {getAvailableStock(product) > 0 ? `${getAvailableStock(product)} disponivel` : "Indisponivel"}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="mt-2 hidden line-clamp-3 text-sm leading-5 text-muted md:block xl:max-w-[52ch] 2xl:max-w-none">{product.description}</p>
+                      <div className="flex flex-1 flex-col pt-3">
+                        <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-ink2 md:text-base">{product.name}</h3>
+                        <p className="mt-1.5 hidden line-clamp-2 text-sm leading-5 text-muted2 md:block">{product.description}</p>
+                        <div className="mt-2 flex flex-1 items-end justify-between gap-2">
+                          <strong className="text-lg font-bold text-ink2 md:text-xl">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
+                          <span className={`shrink-0 text-xs font-semibold ${getAvailableStock(product) > 0 ? "text-muted2" : "text-red-700"}`}>
+                            {getAvailableStock(product) > 0 ? `${getAvailableStock(product)} disponível` : "Indisponível"}
+                          </span>
                         </div>
                         {getCartQuantity(product) === 0 ? (
                           <Button
                             variant="cta"
-                            className="mt-2 h-8 w-full rounded-full text-sm font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97] md:mt-3 md:h-10 md:rounded-lg"
+                            className="mt-3 h-9 w-full rounded-lg text-sm font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97] md:h-10"
                             disabled={getAvailableStock(product) <= 0}
                             type="button"
                             onClick={() => incrementProduct(product)}
@@ -1484,14 +1481,14 @@ export function PublicMenu() {
                             ) : (
                               <>
                                 <Plus className="h-4 w-4" />
-                                ADICIONAR • {formatCurrency(product.variations[0]?.price ?? product.price)}
+                                Adicionar
                               </>
                             )}
                           </Button>
                         ) : (
-                          <div className="mt-2 flex h-8 w-full items-center justify-between rounded-full bg-paper px-1 md:mt-3 md:h-10 md:rounded-lg">
+                          <div className="mt-3 flex h-9 w-full items-center justify-between rounded-lg bg-paper px-1 md:h-10">
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-ink2 shadow-sm md:h-8 md:w-8"
+                              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-ink2 shadow-sm md:h-8 md:w-8"
                               onClick={() => decrementProduct(product)}
                               type="button"
                             >
@@ -1499,7 +1496,7 @@ export function PublicMenu() {
                             </button>
                             <span className="text-sm font-bold text-ink2">{getCartQuantity(product)}</span>
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-ink2 shadow-sm disabled:opacity-40 md:h-8 md:w-8"
+                              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-ink2 shadow-sm disabled:opacity-40 md:h-8 md:w-8"
                               disabled={getAvailableStock(product) <= 0}
                               onClick={() => incrementProduct(product)}
                               type="button"
