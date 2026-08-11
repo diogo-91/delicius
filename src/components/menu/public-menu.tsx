@@ -443,11 +443,7 @@ export function PublicMenu() {
     [categories, products]
   );
 
-  const heroProduct = useMemo(() => getHighlightProducts(categories, products, [], 1)[0] ?? null, [categories, products]);
-  const highlightProducts = useMemo(
-    () => getHighlightProducts(categories, products, heroProduct ? [heroProduct.id] : [], 10),
-    [categories, products, heroProduct]
-  );
+  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, [], 10), [categories, products]);
   const highlightsLoop = useMemo(() => [...highlightProducts, ...highlightProducts], [highlightProducts]);
 
   useEffect(() => {
@@ -1387,70 +1383,13 @@ export function PublicMenu() {
         </div>
       </header>
 
-      {heroProduct ? (
-        <section className="w-full bg-gradient-to-r from-paper to-[#FBEEDD]">
-          <div className="mx-auto grid w-full max-w-[1500px] items-center gap-6 px-4 py-8 md:grid-cols-2 md:gap-10 md:py-12 xl:w-[80%]">
-            <div className="min-w-0">
-              <span className="inline-flex items-center gap-2 font-display text-sm italic text-gold md:text-base">
-                <Crown className="h-4 w-4" strokeWidth={1.5} />O queridinho da {wordmarkName}
-                <Crown className="h-4 w-4" strokeWidth={1.5} />
-              </span>
-              <h1 className="mt-2 break-words font-display text-4xl font-bold uppercase leading-[0.95] text-ink2 md:text-6xl">{heroProduct.name}</h1>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="h-px w-8 bg-gold/50" />
-                <Heart className="h-4 w-4 fill-cta text-cta" />
-                <span className="h-px w-8 bg-gold/50" />
-              </div>
-              {heroProduct.description && <p className="mt-3 max-w-md text-sm text-muted2 md:text-base">{heroProduct.description}</p>}
-              <p className="mt-4 font-display text-3xl font-bold text-cta md:text-4xl">
-                {formatCurrency(heroProduct.variations[0]?.price ?? heroProduct.price)}
-              </p>
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <Button
-                  variant="cta"
-                  className="h-12 rounded-xl px-6 text-sm font-bold uppercase tracking-wide"
-                  disabled={getAvailableStock(heroProduct) <= 0}
-                  onClick={() => {
-                    incrementProduct(heroProduct);
-                    openCart();
-                  }}
-                  type="button"
-                >
-                  {getAvailableStock(heroProduct) <= 0 ? "Sem estoque" : "Quero pedir agora"}
-                  {getAvailableStock(heroProduct) > 0 && <Send className="ml-2 h-4 w-4" />}
-                </Button>
-                <span className="flex items-center gap-2 rounded-xl border border-line2 bg-white/70 px-4 py-2.5 text-xs text-ink2">
-                  <ShieldCheck className="h-4 w-4 text-gold" />
-                  <span>
-                    <span className="block font-semibold">Compra segura</span>
-                    <span className="block text-muted2">Ambiente 100% protegido</span>
-                  </span>
-                </span>
-              </div>
-            </div>
-            <div className="relative mx-auto w-full max-w-md md:max-w-none">
-              <img
-                src={heroProduct.imageUrl}
-                alt={heroProduct.name}
-                className="aspect-square w-full rounded-2xl bg-slate-100 object-cover shadow-[0_20px_50px_rgba(58,31,22,0.18)]"
-              />
-              <div className="absolute -right-2 -top-2 flex h-24 w-24 flex-col items-center justify-center rounded-full border border-gold/40 bg-white text-center shadow-md md:h-28 md:w-28">
-                <span className="font-display text-[9px] uppercase tracking-widest text-gold">Receita exclusiva</span>
-                <span className="font-display text-sm italic text-ink2">{wordmarkName}</span>
-                <span className="text-[8px] uppercase tracking-widest text-muted2">Feito com carinho</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : (
-        <section className="w-full">
-          <img
-            src={restaurant.bannerUrl ?? "/banner.png"}
-            alt="Banner promocional"
-            className="aspect-[5/1] max-h-[300px] w-full bg-slate-100 object-cover"
-          />
-        </section>
-      )}
+      <section className="w-full">
+        <img
+          src={restaurant.bannerUrl ?? "/banner.png"}
+          alt="Banner promocional"
+          className="aspect-[5/1] max-h-[300px] w-full bg-slate-100 object-cover"
+        />
+      </section>
 
       <nav className="sticky top-[168px] z-20 w-full overflow-x-auto bg-cta py-3 md:top-[135px]">
         <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[80%]">
