@@ -252,7 +252,6 @@ export function PublicMenu() {
   const remoteOrdersLoadedRef = useRef(false);
   const highlightsScrollRef = useRef<HTMLDivElement>(null);
   const highlightsPausedRef = useRef(false);
-  const [highlightsIndex, setHighlightsIndex] = useState(0);
   const [cardForm, setCardForm] = useState({
     holder: "",
     number: "",
@@ -422,26 +421,36 @@ export function PublicMenu() {
   );
 
   const highlightProducts = useMemo(() => getHighlightProducts(categories, products, [], 10), [categories, products]);
+  const highlightsLoop = useMemo(() => [...highlightProducts, ...highlightProducts], [highlightProducts]);
 
   useEffect(() => {
-    if (highlightProducts.length === 0) return;
+    const track = highlightsScrollRef.current;
+    if (!track || highlightProducts.length === 0) return;
+
+    let index = 0;
+    const getStep = () => {
+      const card = track.firstElementChild as HTMLElement | null;
+      return (card?.offsetWidth ?? 0) + 12;
+    };
 
     const interval = window.setInterval(() => {
       if (highlightsPausedRef.current) return;
-      setHighlightsIndex((current) => (current + 1) % highlightProducts.length);
+      index += 1;
+      track.style.transition = "transform 500ms ease-out";
+      track.style.transform = `translateX(-${index * getStep()}px)`;
+
+      if (index === highlightProducts.length) {
+        window.setTimeout(() => {
+          track.style.transition = "none";
+          index = 0;
+          track.style.transform = "translateX(0px)";
+          void track.offsetHeight;
+        }, 500);
+      }
     }, 3000);
 
     return () => window.clearInterval(interval);
   }, [highlightProducts.length]);
-
-  useEffect(() => {
-    const track = highlightsScrollRef.current;
-    if (!track) return;
-    const card = track.firstElementChild as HTMLElement | null;
-    if (!card) return;
-    const step = card.offsetWidth + 12;
-    track.style.transform = `translateX(-${highlightsIndex * step}px)`;
-  }, [highlightsIndex, highlightProducts.length]);
   const crossSellProducts = useMemo(
     () => getCrossSellProducts(categories, products, cart.map((item) => item.productId)),
     [categories, products, cart]
@@ -1347,10 +1356,10 @@ export function PublicMenu() {
                 onMouseEnter={() => (highlightsPausedRef.current = true)}
                 onMouseLeave={() => (highlightsPausedRef.current = false)}
               >
-                <div ref={highlightsScrollRef} className="flex gap-3 pb-1 transition-transform duration-500 ease-out">
-                  {highlightProducts.map((product) => (
+                <div ref={highlightsScrollRef} className="flex gap-3 pb-1">
+                  {highlightsLoop.map((product, index) => (
                   <div
-                    key={product.id}
+                    key={`${product.id}-${index}`}
                     className="flex w-[42vw] shrink-0 flex-col rounded-2xl border border-line2 bg-white p-2 transition duration-200 hover:-translate-y-1 hover:border-cta/40 hover:shadow-lg sm:w-[220px]"
                   >
                     <img src={product.imageUrl} alt={product.name} className="aspect-square w-full rounded-xl object-cover" />
