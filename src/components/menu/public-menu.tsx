@@ -1331,11 +1331,11 @@ export function PublicMenu() {
         </div>
       </header>
 
-      <section className="mx-auto mt-2 w-full max-w-[1500px] px-4 md:mt-4 xl:w-[80%]">
+      <section className="mt-2 w-full md:mt-4">
         <img
           src={restaurant.bannerUrl ?? "/banner.png"}
           alt="Banner promocional"
-          className="aspect-[5/1] max-h-[300px] w-full rounded-2xl bg-slate-100 object-cover"
+          className="aspect-[5/1] max-h-[300px] w-full bg-slate-100 object-cover"
         />
       </section>
 
