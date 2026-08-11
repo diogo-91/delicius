@@ -1390,11 +1390,11 @@ export function PublicMenu() {
         />
       </section>
 
-      <nav className="sticky top-[168px] z-20 w-full overflow-x-auto border-b border-line2 bg-paper py-3 md:top-[135px]">
+      <nav className="sticky top-[168px] z-20 w-full overflow-x-auto border-b border-line2 bg-white py-3 md:top-[135px]">
         <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[80%]">
           <button
             className={`flex shrink-0 items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold shadow-sm transition ${
-              activeCategory === "all" ? "border-cta bg-cta text-gold shadow-md" : "border-line2 bg-white text-ink2 hover:border-gold/60"
+              activeCategory === "all" ? "border-cta bg-cta text-white shadow-md" : "border-line2 bg-white text-ink2 hover:border-gold/60"
             }`}
             onClick={() => setActiveCategory("all")}
             type="button"
@@ -1409,7 +1409,7 @@ export function PublicMenu() {
               <button
                 key={category.id}
                 className={`flex shrink-0 items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold shadow-sm transition ${
-                  isActive ? "border-cta bg-cta text-gold shadow-md" : "border-line2 bg-white text-ink2 hover:border-gold/60"
+                  isActive ? "border-cta bg-cta text-white shadow-md" : "border-line2 bg-white text-ink2 hover:border-gold/60"
                 }`}
                 onClick={() => setActiveCategory(category.id)}
                 type="button"
