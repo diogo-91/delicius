@@ -1249,7 +1249,7 @@ export function PublicMenu() {
   return (
     <main className="min-h-screen bg-[#f7f2ed] pb-24 text-ink md:bg-[#f5f6f8] xl:pb-12">
       <header className="sticky top-0 z-30 border-b border-line2 bg-white">
-        <div className="mx-auto flex w-full max-w-[1500px] items-center gap-3 px-4 py-3 xl:w-[94%]">
+        <div className="mx-auto flex w-full max-w-[1500px] items-center gap-3 px-4 py-3 xl:w-[80%]">
           <div className="flex shrink-0 flex-col items-center leading-none">
             <Crown className="h-3.5 w-3.5 text-ink2" strokeWidth={1.5} />
             <span className="font-display text-xl italic text-ink2 md:text-2xl">{wordmarkName}</span>
@@ -1331,7 +1331,7 @@ export function PublicMenu() {
         </div>
       </header>
 
-      <section className="mx-auto mt-2 w-full max-w-[1500px] px-4 md:mt-4 xl:w-[94%]">
+      <section className="mx-auto mt-2 w-full max-w-[1500px] px-4 md:mt-4 xl:w-[80%]">
         <img
           src={restaurant.bannerUrl ?? "/banner.png"}
           alt="Banner promocional"
@@ -1340,7 +1340,7 @@ export function PublicMenu() {
       </section>
 
       <nav className="sticky top-[150px] z-20 mt-4 w-full overflow-x-auto bg-paper py-3 md:top-[102px]">
-        <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[94%]">
+        <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[80%]">
           <button
             className={`flex shrink-0 items-center gap-2 rounded-full border bg-white px-5 py-3 text-sm font-semibold shadow-sm transition ${
               activeCategory === "all" ? "border-gold shadow-md" : "border-line2 hover:border-gold/60"
@@ -1371,7 +1371,7 @@ export function PublicMenu() {
         </div>
       </nav>
 
-      <div className="mx-auto grid w-full max-w-[1500px] gap-5 px-4 py-3 md:py-6 xl:w-[94%]">
+      <div className="mx-auto grid w-full max-w-[1500px] gap-5 px-4 py-3 md:py-6 xl:w-[80%]">
         <section className="min-w-0 space-y-6 pb-12">
           {activeCategory === "all" && highlightProducts.length > 0 && (
             <div className="space-y-3">
@@ -1452,7 +1452,7 @@ export function PublicMenu() {
             {visibleCategories.map((category) => (
               <section key={category.id} className="space-y-4 md:space-y-5">
                 {activeCategory === "all" && (
-                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-paper to-[#FBEEDD] px-5 py-5 md:px-8 md:py-6">
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-paper to-[#FBEEDD] px-4 py-4 md:px-6 md:py-5">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0">
                         <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
@@ -1460,17 +1460,17 @@ export function PublicMenu() {
                           Selecionados com carinho
                           <span className="h-px w-5 bg-gold/50" />
                         </span>
-                        <h3 className="mt-1 flex items-center gap-2 font-display text-2xl font-bold leading-tight text-ink2 md:text-4xl">
+                        <h3 className="mt-1 flex items-center gap-2 font-display text-xl font-bold leading-tight text-ink2 md:text-2xl">
                           {category.name}
-                          <Heart className="h-5 w-5 shrink-0 fill-cta text-cta md:h-6 md:w-6" />
+                          <Heart className="h-4 w-4 shrink-0 fill-cta text-cta md:h-5 md:w-5" />
                         </h3>
-                        <p className="mt-1 text-sm text-muted2">Descubra nossas opções artesanais.</p>
+                        <p className="mt-1 text-xs text-muted2">Descubra nossas opções artesanais.</p>
                       </div>
-                      <div className="hidden shrink-0 items-center gap-6 md:flex">
+                      <div className="hidden shrink-0 items-center gap-5 md:flex">
                         {categoryHeaderBadges.map((item) => (
-                          <div key={item.title} className="flex items-center gap-2">
-                            <item.icon className="h-5 w-5 text-gold" />
-                            <span className="text-sm font-medium text-ink2">{item.title}</span>
+                          <div key={item.title} className="flex items-center gap-1.5">
+                            <item.icon className="h-4 w-4 text-gold" />
+                            <span className="text-xs font-medium text-ink2">{item.title}</span>
                           </div>
                         ))}
                       </div>
@@ -1562,7 +1562,7 @@ export function PublicMenu() {
         </section>
       </div>
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pb-8 xl:w-[94%]">
+      <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pb-8 xl:w-[80%]">
         <SocialProof reviews={placeholderReviews} products={products} excludeIds={highlightProducts.map((product) => product.id)} />
 
         {crossSellProducts.length > 0 && (
@@ -1595,7 +1595,7 @@ export function PublicMenu() {
       </div>
 
       <div className="border-y border-line2 bg-white">
-        <div className="mx-auto grid w-full max-w-[1500px] grid-cols-2 gap-4 px-4 py-5 xl:w-[94%] sm:grid-cols-4">
+        <div className="mx-auto grid w-full max-w-[1500px] grid-cols-2 gap-4 px-4 py-5 xl:w-[80%] sm:grid-cols-4">
           <div className="flex items-start gap-2">
             <CreditCard className="h-5 w-5 shrink-0 text-gold" />
             <div>
@@ -1628,7 +1628,7 @@ export function PublicMenu() {
       </div>
 
       <footer className="bg-[#3A1F16] text-white/80">
-        <div className="mx-auto grid w-full max-w-[1500px] gap-8 px-4 py-8 xl:w-[94%] sm:grid-cols-3">
+        <div className="mx-auto grid w-full max-w-[1500px] gap-8 px-4 py-8 xl:w-[80%] sm:grid-cols-3">
           <div>
             <div className="flex flex-col items-start leading-none">
               <Crown className="h-3.5 w-3.5 text-white" strokeWidth={1.5} />
