@@ -1413,7 +1413,7 @@ export function PublicMenu() {
           )}
 
           {menuLoading && (
-            <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
+            <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="h-[190px] animate-pulse rounded-3xl bg-slate-100 md:h-[176px] md:rounded-2xl" />
               ))}
@@ -1439,7 +1439,7 @@ export function PublicMenu() {
                   </div>
                 )}
 
-                <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
+                <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
                   {category.products.map((product, index) => (
                     <article key={product.id} className="group relative grid grid-cols-1 overflow-hidden rounded-3xl bg-white p-1.5 shadow-[0_6px_18px_rgba(79,38,24,0.05)] transition duration-200 motion-reduce:transition-none active:scale-[0.985] motion-safe:hover:-translate-y-0.5 md:min-h-[190px] md:rounded-2xl md:border md:border-slate-200 md:p-3 md:shadow-sm md:hover:border-brand-100 md:hover:shadow-soft lg:grid-cols-[160px_minmax(0,1fr)] 2xl:grid-cols-[180px_minmax(0,1fr)]">
                       <div className="relative flex items-center justify-center rounded-[22px] bg-[#F8F4EF] md:rounded-xl md:bg-slate-50">
