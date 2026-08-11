@@ -1331,7 +1331,7 @@ export function PublicMenu() {
         </div>
       </header>
 
-      <section className="mt-2 w-full md:mt-4">
+      <section className="w-full">
         <img
           src={restaurant.bannerUrl ?? "/banner.png"}
           alt="Banner promocional"
@@ -1339,7 +1339,7 @@ export function PublicMenu() {
         />
       </section>
 
-      <nav className="sticky top-[150px] z-20 mt-4 w-full overflow-x-auto bg-cta py-3 md:top-[102px]">
+      <nav className="sticky top-[150px] z-20 w-full overflow-x-auto bg-cta py-3 md:top-[102px]">
         <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[80%]">
           <button
             className={`flex shrink-0 items-center gap-2 rounded-full border bg-white px-5 py-3 text-sm font-semibold shadow-sm transition ${
