@@ -1370,7 +1370,7 @@ export function PublicMenu() {
                     {getCartQuantity(product) === 0 ? (
                       <Button
                         variant="cta"
-                        className="mt-2 h-8 w-full rounded-full text-xs"
+                        className="mt-2 h-8 min-h-0 w-full rounded-full text-xs"
                         disabled={getAvailableStock(product) <= 0}
                         onClick={() => incrementProduct(product)}
                         type="button"
@@ -1443,9 +1443,9 @@ export function PublicMenu() {
                   {category.products.map((product, index) => (
                     <article
                       key={product.id}
-                      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line2 bg-white p-2 shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md"
+                      className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-line2 bg-white p-1.5 shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md"
                     >
-                      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-paper">
+                      <div className="relative aspect-[3/2] w-full overflow-hidden rounded-md bg-paper">
                         <img
                           src={product.imageUrl}
                           alt={product.name}
@@ -1454,24 +1454,24 @@ export function PublicMenu() {
                           className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                         />
                         {category.id === "cat_promocao" && index === 0 && (
-                          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-cta text-xs font-semibold text-white shadow-[0_6px_14px_rgba(79,38,24,0.16)]">
+                          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-cta text-[10px] font-semibold text-white shadow-[0_6px_14px_rgba(79,38,24,0.16)]">
                             1
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-1 flex-col pt-2">
-                        <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-ink2">{product.name}</h3>
+                      <div className="flex flex-1 flex-col pt-1.5">
+                        <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-ink2 sm:text-sm">{product.name}</h3>
                         <p className="mt-1 hidden line-clamp-2 text-xs leading-4 text-muted2 md:block">{product.description}</p>
-                        <div className="mt-1.5 flex flex-1 items-end justify-between gap-2">
-                          <strong className="text-base font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
-                          <span className={`shrink-0 text-xs font-semibold ${getAvailableStock(product) > 0 ? "text-muted2" : "text-red-700"}`}>
+                        <div className="mt-1 flex flex-1 items-end justify-between gap-2">
+                          <strong className="text-sm font-bold text-ink2 sm:text-base">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
+                          <span className={`shrink-0 text-[11px] font-semibold ${getAvailableStock(product) > 0 ? "text-muted2" : "text-red-700"}`}>
                             {getAvailableStock(product) > 0 ? `${getAvailableStock(product)} disponível` : "Indisponível"}
                           </span>
                         </div>
                         {getCartQuantity(product) === 0 ? (
                           <Button
                             variant="cta"
-                            className="mt-2 h-8 w-full rounded-lg text-xs font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97]"
+                            className="mt-1.5 h-7 min-h-0 w-full rounded-md text-xs font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97]"
                             disabled={getAvailableStock(product) <= 0}
                             type="button"
                             onClick={() => incrementProduct(product)}
@@ -1486,22 +1486,22 @@ export function PublicMenu() {
                             )}
                           </Button>
                         ) : (
-                          <div className="mt-2 flex h-8 w-full items-center justify-between rounded-lg bg-paper px-1">
+                          <div className="mt-1.5 flex h-7 w-full items-center justify-between rounded-md bg-paper px-1">
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-ink2 shadow-sm"
+                              className="flex h-5 w-5 items-center justify-center rounded bg-white text-ink2 shadow-sm"
                               onClick={() => decrementProduct(product)}
                               type="button"
                             >
-                              <Minus className="h-3.5 w-3.5" />
+                              <Minus className="h-3 w-3" />
                             </button>
-                            <span className="text-sm font-bold text-ink2">{getCartQuantity(product)}</span>
+                            <span className="text-xs font-bold text-ink2">{getCartQuantity(product)}</span>
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-ink2 shadow-sm disabled:opacity-40"
+                              className="flex h-5 w-5 items-center justify-center rounded bg-white text-ink2 shadow-sm disabled:opacity-40"
                               disabled={getAvailableStock(product) <= 0}
                               onClick={() => incrementProduct(product)}
                               type="button"
                             >
-                              <Plus className="h-3.5 w-3.5" />
+                              <Plus className="h-3 w-3" />
                             </button>
                           </div>
                         )}
