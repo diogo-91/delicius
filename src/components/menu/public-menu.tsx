@@ -1413,7 +1413,7 @@ export function PublicMenu() {
           )}
 
           {menuLoading && (
-            <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="h-[190px] animate-pulse rounded-3xl bg-slate-100 md:h-[176px] md:rounded-2xl" />
               ))}
@@ -1439,13 +1439,13 @@ export function PublicMenu() {
                   </div>
                 )}
 
-                <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
                   {category.products.map((product, index) => (
                     <article
                       key={product.id}
-                      className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-line2 bg-white p-1.5 shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md"
+                      className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-line2 bg-white p-1 shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md"
                     >
-                      <div className="relative aspect-[3/2] w-full overflow-hidden rounded-md bg-paper">
+                      <div className="relative aspect-square w-full overflow-hidden rounded bg-paper">
                         <img
                           src={product.imageUrl}
                           alt={product.name}
@@ -1459,19 +1459,19 @@ export function PublicMenu() {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-1 flex-col pt-1.5">
-                        <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-ink2 sm:text-sm">{product.name}</h3>
-                        <p className="mt-1 hidden line-clamp-2 text-xs leading-4 text-muted2 md:block">{product.description}</p>
-                        <div className="mt-1 flex flex-1 items-end justify-between gap-2">
-                          <strong className="text-sm font-bold text-ink2 sm:text-base">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
-                          <span className={`shrink-0 text-[11px] font-semibold ${getAvailableStock(product) > 0 ? "text-muted2" : "text-red-700"}`}>
+                      <div className="flex flex-1 flex-col pt-1">
+                        <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-ink2">{product.name}</h3>
+                        <p className="mt-0.5 hidden line-clamp-1 text-xs leading-4 text-muted2 md:block">{product.description}</p>
+                        <div className="mt-0.5 flex flex-1 items-end justify-between gap-2">
+                          <strong className="text-sm font-bold text-ink2">{formatCurrency(product.variations[0]?.price ?? product.price)}</strong>
+                          <span className={`shrink-0 text-[10px] font-semibold ${getAvailableStock(product) > 0 ? "text-muted2" : "text-red-700"}`}>
                             {getAvailableStock(product) > 0 ? `${getAvailableStock(product)} disponível` : "Indisponível"}
                           </span>
                         </div>
                         {getCartQuantity(product) === 0 ? (
                           <Button
                             variant="cta"
-                            className="mt-1.5 h-7 min-h-0 w-full rounded-md text-xs font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97]"
+                            className="mt-1 h-6 min-h-0 w-full rounded text-[11px] font-semibold shadow-none transition duration-200 motion-reduce:transition-none active:scale-[0.97]"
                             disabled={getAvailableStock(product) <= 0}
                             type="button"
                             onClick={() => incrementProduct(product)}
@@ -1480,28 +1480,28 @@ export function PublicMenu() {
                               "Sem estoque"
                             ) : (
                               <>
-                                <Plus className="h-3.5 w-3.5" />
+                                <Plus className="h-3 w-3" />
                                 Adicionar
                               </>
                             )}
                           </Button>
                         ) : (
-                          <div className="mt-1.5 flex h-7 w-full items-center justify-between rounded-md bg-paper px-1">
+                          <div className="mt-1 flex h-6 w-full items-center justify-between rounded bg-paper px-1">
                             <button
-                              className="flex h-5 w-5 items-center justify-center rounded bg-white text-ink2 shadow-sm"
+                              className="flex h-4 w-4 items-center justify-center rounded-sm bg-white text-ink2 shadow-sm"
                               onClick={() => decrementProduct(product)}
                               type="button"
                             >
-                              <Minus className="h-3 w-3" />
+                              <Minus className="h-2.5 w-2.5" />
                             </button>
-                            <span className="text-xs font-bold text-ink2">{getCartQuantity(product)}</span>
+                            <span className="text-[11px] font-bold text-ink2">{getCartQuantity(product)}</span>
                             <button
-                              className="flex h-5 w-5 items-center justify-center rounded bg-white text-ink2 shadow-sm disabled:opacity-40"
+                              className="flex h-4 w-4 items-center justify-center rounded-sm bg-white text-ink2 shadow-sm disabled:opacity-40"
                               disabled={getAvailableStock(product) <= 0}
                               onClick={() => incrementProduct(product)}
                               type="button"
                             >
-                              <Plus className="h-3 w-3" />
+                              <Plus className="h-2.5 w-2.5" />
                             </button>
                           </div>
                         )}
