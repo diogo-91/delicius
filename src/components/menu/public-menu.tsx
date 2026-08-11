@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, Clock, CreditCard, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { CalendarDays, Check, ChefHat, Clock, CreditCard, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, createOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -22,6 +22,12 @@ import { SocialProof, placeholderReviews } from "@/components/menu/social-proof"
 const categoryIcons = [Gift, Star, Flame, Sparkles, Utensils, Utensils, ShoppingBag, ShoppingBag];
 const categoryIconColors = ["text-cta", "text-gold", "text-orange-500", "text-purple-500", "text-emerald-600", "text-cta", "text-gold", "text-orange-500"];
 const menuSlug = "delicious-gourmet-bolos-e-salgados";
+
+const categoryHeaderBadges = [
+  { icon: Heart, title: "Feitas com amor" },
+  { icon: Sparkles, title: "Ingredientes selecionados" },
+  { icon: ChefHat, title: "Receitas exclusivas" }
+];
 
 const benefits = [
   { icon: Sparkles, title: "Ingredientes selecionados", description: "Produtos frescos e de alta qualidade." },
@@ -1446,16 +1452,27 @@ export function PublicMenu() {
             {visibleCategories.map((category) => (
               <section key={category.id} className="space-y-4 md:space-y-5">
                 {activeCategory === "all" && (
-                  <div className={`flex items-center justify-between gap-4 border-b border-line pb-3 md:pb-4 ${category.id === "cat_promocao" ? "rounded-2xl border-none bg-[#fff5ed] px-3 py-2 shadow-[0_4px_12px_rgba(79,38,24,0.04)] md:rounded-none md:border-b md:bg-transparent md:px-0 md:py-0 md:shadow-none" : ""}`}>
-                    <div className="flex min-w-0 items-center gap-2">
-                      {category.id === "cat_promocao" && (
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-brand-700 shadow-[0_3px_8px_rgba(79,38,24,0.04)] md:hidden">
-                          <Gift className="h-4 w-4" />
-                        </span>
-                      )}
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-paper to-[#FBEEDD] px-5 py-5 md:px-8 md:py-6">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0">
-                        <h3 className="font-display text-[19px] font-semibold leading-6 text-ink2 md:text-xl">{category.name}</h3>
-                        {category.id === "cat_promocao" && <p className="mt-0.5 text-[11px] font-medium text-brand-700 md:hidden">Seleção especial de hoje</p>}
+                        <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+                          <span className="h-px w-5 bg-gold/50" />
+                          Selecionados com carinho
+                          <span className="h-px w-5 bg-gold/50" />
+                        </span>
+                        <h3 className="mt-1 flex items-center gap-2 font-display text-2xl font-bold leading-tight text-ink2 md:text-4xl">
+                          {category.name}
+                          <Heart className="h-5 w-5 shrink-0 fill-cta text-cta md:h-6 md:w-6" />
+                        </h3>
+                        <p className="mt-1 text-sm text-muted2">Descubra nossas opções artesanais.</p>
+                      </div>
+                      <div className="hidden shrink-0 items-center gap-6 md:flex">
+                        {categoryHeaderBadges.map((item) => (
+                          <div key={item.title} className="flex items-center gap-2">
+                            <item.icon className="h-5 w-5 text-gold" />
+                            <span className="text-sm font-medium text-ink2">{item.title}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
