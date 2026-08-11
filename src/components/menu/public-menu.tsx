@@ -1351,7 +1351,7 @@ export function PublicMenu() {
                   {highlightProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="flex h-full w-[42vw] shrink-0 flex-col rounded-2xl border border-line2 bg-white p-2 transition duration-200 hover:-translate-y-1 hover:border-cta/40 hover:shadow-lg sm:w-[220px]"
+                    className="flex w-[42vw] shrink-0 flex-col rounded-2xl border border-line2 bg-white p-2 transition duration-200 hover:-translate-y-1 hover:border-cta/40 hover:shadow-lg sm:w-[220px]"
                   >
                     <img src={product.imageUrl} alt={product.name} className="aspect-square w-full rounded-xl object-cover" />
                     <div className="flex flex-1 flex-col">
