@@ -43,7 +43,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
 
   return (
     <form
-      className="space-y-5"
+      className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
         void signInWithPassword();
@@ -54,7 +54,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
         <span className="relative block">
           <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A7B6E]" />
           <Input
-            className="h-12 rounded-xl border-0 bg-white pl-11 shadow-[0_6px_22px_rgba(79,38,24,0.07)] placeholder:text-[#A8958C] focus:ring-4 focus:ring-[#EFD4C6]"
+            className="h-11 rounded-xl border-0 bg-white pl-11 shadow-[0_5px_18px_rgba(79,38,24,0.08)] placeholder:text-[#A8958C] focus:ring-4 focus:ring-[#EFD4C6]"
             type="email"
             placeholder="seuemail@exemplo.com"
             value={email}
@@ -70,7 +70,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
         <span className="relative block">
           <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A7B6E]" />
           <Input
-            className="h-12 rounded-xl border-0 bg-white px-11 shadow-[0_6px_22px_rgba(79,38,24,0.07)] placeholder:text-[#A8958C] focus:ring-4 focus:ring-[#EFD4C6]"
+            className="h-11 rounded-xl border-0 bg-white px-11 shadow-[0_5px_18px_rgba(79,38,24,0.08)] placeholder:text-[#A8958C] focus:ring-4 focus:ring-[#EFD4C6]"
             type={showPassword ? "text" : "password"}
             placeholder="Digite sua senha"
             value={password}
@@ -89,7 +89,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
         </span>
       </label>
 
-      <Button variant="cta" className="h-12 w-full rounded-xl text-[15px] shadow-[0_10px_24px_rgba(179,38,30,0.2)]" disabled={loading} type="submit">
+      <Button variant="cta" className="h-11 w-full rounded-xl text-sm shadow-[0_10px_24px_rgba(179,38,30,0.2)]" disabled={loading} type="submit">
         {loading ? "Entrando..." : "Entrar no painel"}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </Button>
