@@ -201,13 +201,13 @@ export function OrdersKanban() {
           <p className="mt-1 text-sm text-slate-500">Acompanhe e atualize o andamento de cada pedido em tempo real.</p>
         </div>
         <div className="grid grid-cols-3 gap-3 lg:flex-1">
-          <AdminStatCard label="Pedidos em andamento" value={totalOpenOrders} icon={TimerReset} tone="violet" />
-          <AdminStatCard label="Novos pedidos" value={orders.filter((order) => order.status === "new").length} icon={Clock} tone="amber" />
-          <AdminStatCard label="Vendas registradas" value={totalSalesToday} currency icon={Wallet} tone="green" />
+          <AdminStatCard className="rounded-2xl shadow-[0_4px_18px_rgba(36,26,23,0.06)]" label="Pedidos em andamento" value={totalOpenOrders} icon={TimerReset} tone="violet" />
+          <AdminStatCard className="rounded-2xl shadow-[0_4px_18px_rgba(36,26,23,0.06)]" label="Novos pedidos" value={orders.filter((order) => order.status === "new").length} icon={Clock} tone="amber" />
+          <AdminStatCard className="rounded-2xl shadow-[0_4px_18px_rgba(36,26,23,0.06)]" label="Vendas registradas" value={totalSalesToday} currency icon={Wallet} tone="green" />
         </div>
       </div>
 
-      <section className="flex shrink-0 flex-wrap gap-1.5 border-b border-[#E5E7EB]/50 pb-2">
+      <section className="flex shrink-0 flex-wrap gap-2.5 rounded-2xl bg-white/60 p-2 shadow-[0_1px_3px_rgba(36,26,23,0.04)]">
         {statuses.map((status) => {
           const Icon = status.icon;
           const active = activeStatus === status.status;
@@ -216,8 +216,8 @@ export function OrdersKanban() {
             <button
               key={status.status}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-150",
-                active ? "bg-brand-50/50 text-[#7b3f2a]" : "bg-transparent text-[#6B7280] hover:text-[#111827]"
+                "flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all duration-150",
+                active ? `${status.activePill} shadow-sm` : "border-transparent bg-transparent text-[#665C57] hover:bg-white hover:text-[#241A17]"
               )}
               onClick={() => {
                 setActiveStatus(status.status);
@@ -225,9 +225,9 @@ export function OrdersKanban() {
               }}
               type="button"
             >
-              <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+              <Icon className="h-4 w-4" strokeWidth={2.25} />
               {status.shortTitle}
-              <span className={cn("flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-semibold", active ? "bg-white text-[#7b3f2a]" : "bg-slate-100 text-[#6B7280]")}>{count}</span>
+              <span className={cn("flex h-5 min-w-5 items-center justify-center rounded-md px-1.5 text-[10px] font-bold", active ? "bg-white/90 text-current shadow-sm" : "bg-[#ECE7E3] text-[#665C57]")}>{count}</span>
             </button>
           );
         })}

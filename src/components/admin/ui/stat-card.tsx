@@ -18,7 +18,8 @@ export function AdminStatCard({
   currency,
   icon: Icon,
   tone = "brand",
-  trend
+  trend,
+  className
 }: {
   label: string;
   value: string | number;
@@ -27,9 +28,10 @@ export function AdminStatCard({
   tone?: AdminStatTone;
   /** Percentage change vs. the previous period. Omit when there's no real comparison data. */
   trend?: number;
+  className?: string;
 }) {
   return (
-    <div className="group flex h-full flex-col bg-white p-5 transition-colors duration-150 hover:bg-[#FCFAF8]">
+    <div className={cn("group flex h-full flex-col bg-white p-5 transition-colors duration-150 hover:bg-[#FCFAF8]", className)}>
       <div className="flex items-center justify-between gap-2">
         {Icon && (
           <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", toneStyles[tone])}>
