@@ -32,7 +32,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
 
     if (next.startsWith("/dashboard")) {
       await supabase.rpc("ensure_owner_profile", {
-        restaurant_name: "Meu restaurante",
+        restaurant_name: "Meu negócio",
         owner_name: email
       });
     }
@@ -54,9 +54,9 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
         <span className="relative block">
           <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A7B6E]" />
           <Input
-            className="h-12 rounded-xl border-[#EADFD8] bg-white pl-11 placeholder:text-[#A8958C] focus:border-[#9A5A3C] focus:ring-[#EFD4C6]"
+            className="h-12 rounded-xl border-0 bg-white pl-11 shadow-[0_6px_22px_rgba(79,38,24,0.07)] placeholder:text-[#A8958C] focus:ring-4 focus:ring-[#EFD4C6]"
             type="email"
-            placeholder="email@restaurante.com"
+            placeholder="seuemail@exemplo.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="email"
@@ -70,7 +70,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
         <span className="relative block">
           <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A7B6E]" />
           <Input
-            className="h-12 rounded-xl border-[#EADFD8] bg-white px-11 placeholder:text-[#A8958C] focus:border-[#9A5A3C] focus:ring-[#EFD4C6]"
+            className="h-12 rounded-xl border-0 bg-white px-11 shadow-[0_6px_22px_rgba(79,38,24,0.07)] placeholder:text-[#A8958C] focus:ring-4 focus:ring-[#EFD4C6]"
             type={showPassword ? "text" : "password"}
             placeholder="Digite sua senha"
             value={password}
@@ -93,7 +93,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
         {loading ? "Entrando..." : "Entrar no painel"}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </Button>
-      {message && <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">{message}</p>}
+      {message && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700 shadow-sm">{message}</p>}
     </form>
   );
 }
