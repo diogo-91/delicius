@@ -152,6 +152,9 @@ export function OrdersKanban() {
       const tremolo = context.createGain();
       const tremoloOscillator = context.createOscillator();
       const tremoloDepth = context.createGain();
+      const highPass = context.createBiquadFilter();
+      const presence = context.createBiquadFilter();
+      const compressor = context.createDynamicsCompressor();
 
       output.gain.setValueAtTime(0.0001, burstStart);
       output.gain.exponentialRampToValueAtTime(0.72, burstStart + 0.018);
@@ -165,7 +168,24 @@ export function OrdersKanban() {
       tremoloOscillator.connect(tremoloDepth);
       tremoloDepth.connect(tremolo.gain);
       tremolo.connect(output);
-      output.connect(context.destination);
+
+      highPass.type = "highpass";
+      highPass.frequency.setValueAtTime(700, burstStart);
+      highPass.Q.setValueAtTime(0.8, burstStart);
+      presence.type = "peaking";
+      presence.frequency.setValueAtTime(1650, burstStart);
+      presence.Q.setValueAtTime(2.2, burstStart);
+      presence.gain.setValueAtTime(7, burstStart);
+      compressor.threshold.setValueAtTime(-18, burstStart);
+      compressor.knee.setValueAtTime(10, burstStart);
+      compressor.ratio.setValueAtTime(5, burstStart);
+      compressor.attack.setValueAtTime(0.003, burstStart);
+      compressor.release.setValueAtTime(0.15, burstStart);
+
+      output.connect(highPass);
+      highPass.connect(presence);
+      presence.connect(compressor);
+      compressor.connect(context.destination);
 
       [
         { frequency: 930, volume: 0.19, type: "square" as OscillatorType },
