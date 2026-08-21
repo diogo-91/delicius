@@ -143,27 +143,48 @@ export function OrdersKanban() {
     if (!context || context.state !== "running") return;
 
     const start = context.currentTime + 0.03;
-    const notes = [
-      { at: 0, frequency: 880 },
-      { at: 0.2, frequency: 1175 },
-      { at: 0.4, frequency: 880 },
-      { at: 0.75, frequency: 880 },
-      { at: 0.95, frequency: 1175 },
-      { at: 1.15, frequency: 880 }
-    ];
+    const ringBursts = [0, 1.15, 2.3];
 
-    notes.forEach(({ at, frequency }) => {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = "square";
-      oscillator.frequency.setValueAtTime(frequency, start + at);
-      gain.gain.setValueAtTime(0.0001, start + at);
-      gain.gain.exponentialRampToValueAtTime(0.3, start + at + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + at + 0.16);
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start(start + at);
-      oscillator.stop(start + at + 0.17);
+    ringBursts.forEach((offset) => {
+      const burstStart = start + offset;
+      const burstEnd = burstStart + 0.82;
+      const output = context.createGain();
+      const tremolo = context.createGain();
+      const tremoloOscillator = context.createOscillator();
+      const tremoloDepth = context.createGain();
+
+      output.gain.setValueAtTime(0.0001, burstStart);
+      output.gain.exponentialRampToValueAtTime(0.78, burstStart + 0.025);
+      output.gain.setValueAtTime(0.78, burstEnd - 0.05);
+      output.gain.exponentialRampToValueAtTime(0.0001, burstEnd);
+
+      tremolo.gain.setValueAtTime(0.52, burstStart);
+      tremoloOscillator.type = "square";
+      tremoloOscillator.frequency.setValueAtTime(26, burstStart);
+      tremoloDepth.gain.setValueAtTime(0.46, burstStart);
+      tremoloOscillator.connect(tremoloDepth);
+      tremoloDepth.connect(tremolo.gain);
+      tremolo.connect(output);
+      output.connect(context.destination);
+
+      [
+        { frequency: 440, volume: 0.22, type: "triangle" as OscillatorType },
+        { frequency: 480, volume: 0.22, type: "triangle" as OscillatorType },
+        { frequency: 920, volume: 0.06, type: "sine" as OscillatorType }
+      ].forEach(({ frequency, volume, type }) => {
+        const carrier = context.createOscillator();
+        const carrierGain = context.createGain();
+        carrier.type = type;
+        carrier.frequency.setValueAtTime(frequency, burstStart);
+        carrierGain.gain.setValueAtTime(volume, burstStart);
+        carrier.connect(carrierGain);
+        carrierGain.connect(tremolo);
+        carrier.start(burstStart);
+        carrier.stop(burstEnd + 0.02);
+      });
+
+      tremoloOscillator.start(burstStart);
+      tremoloOscillator.stop(burstEnd + 0.02);
     });
   }
 
