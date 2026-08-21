@@ -50,9 +50,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
             <LoginForm next={next} />
 
-            <div className="mt-5 flex flex-col gap-3 pt-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-5 pt-2 text-sm">
               <Link href="/recuperar-senha" className="font-semibold text-[#7B3F2A] transition hover:text-[#4F2618]">Esqueci minha senha</Link>
-              <Link href="/cadastro" className="text-[#75645D] transition hover:text-[#3A1F16]">Criar uma conta</Link>
             </div>
           </div>
         </div>
