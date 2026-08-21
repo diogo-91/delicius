@@ -200,7 +200,7 @@ export function AdminShell({ children, user }: { children: React.ReactNode; user
     <div className="flex min-h-screen flex-col bg-[#F7F3EE] lg:h-screen lg:flex-row lg:overflow-hidden">
       <aside
         className={cn(
-          "relative hidden shrink-0 flex-col overflow-hidden bg-gradient-to-b from-[#3C1C13] via-[#30150F] to-[#21100C] transition-[width] duration-200 lg:flex",
+          "relative hidden shrink-0 flex-col overflow-hidden bg-[#2B1711] transition-[width] duration-200 lg:flex",
           collapsed ? "w-[76px]" : "w-[232px]"
         )}
       >
