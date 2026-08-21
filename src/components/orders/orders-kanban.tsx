@@ -143,24 +143,24 @@ export function OrdersKanban() {
     if (!context || context.state !== "running") return;
 
     const start = context.currentTime + 0.03;
-    const ringBursts = [0, 1.15, 2.3];
+    const ringBursts = [0, 0.92, 1.84, 2.76];
 
     ringBursts.forEach((offset) => {
       const burstStart = start + offset;
-      const burstEnd = burstStart + 0.82;
+      const burstEnd = burstStart + 0.62;
       const output = context.createGain();
       const tremolo = context.createGain();
       const tremoloOscillator = context.createOscillator();
       const tremoloDepth = context.createGain();
 
       output.gain.setValueAtTime(0.0001, burstStart);
-      output.gain.exponentialRampToValueAtTime(0.78, burstStart + 0.025);
-      output.gain.setValueAtTime(0.78, burstEnd - 0.05);
+      output.gain.exponentialRampToValueAtTime(0.72, burstStart + 0.018);
+      output.gain.setValueAtTime(0.72, burstEnd - 0.04);
       output.gain.exponentialRampToValueAtTime(0.0001, burstEnd);
 
       tremolo.gain.setValueAtTime(0.52, burstStart);
       tremoloOscillator.type = "square";
-      tremoloOscillator.frequency.setValueAtTime(26, burstStart);
+      tremoloOscillator.frequency.setValueAtTime(30, burstStart);
       tremoloDepth.gain.setValueAtTime(0.46, burstStart);
       tremoloOscillator.connect(tremoloDepth);
       tremoloDepth.connect(tremolo.gain);
@@ -168,9 +168,9 @@ export function OrdersKanban() {
       output.connect(context.destination);
 
       [
-        { frequency: 440, volume: 0.22, type: "triangle" as OscillatorType },
-        { frequency: 480, volume: 0.22, type: "triangle" as OscillatorType },
-        { frequency: 920, volume: 0.06, type: "sine" as OscillatorType }
+        { frequency: 930, volume: 0.19, type: "square" as OscillatorType },
+        { frequency: 1180, volume: 0.16, type: "triangle" as OscillatorType },
+        { frequency: 1860, volume: 0.045, type: "sine" as OscillatorType }
       ].forEach(({ frequency, volume, type }) => {
         const carrier = context.createOscillator();
         const carrierGain = context.createGain();
