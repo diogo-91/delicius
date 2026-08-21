@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .select("role")
     .eq("id", data.user.id)
     .maybeSingle();
-  const role = profile?.role === "owner" ? "owner" : "cashier";
+  const role = profile?.role === "cashier" ? "cashier" : "owner";
 
   return <AdminShell user={data.user} role={role}>{children}</AdminShell>;
 }
