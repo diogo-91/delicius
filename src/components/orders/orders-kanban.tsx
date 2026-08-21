@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Bike, CheckCircle2, Clock, MapPin, Package, PackageCheck, Phone, Printer, Receipt, Search, TimerReset, User, Wallet, XCircle } from "lucide-react";
+import { Bike, CheckCircle2, Clock, MapPin, Package, PackageCheck, Phone, Printer, Receipt, Search, TimerReset, User, Volume2, VolumeX, Wallet, XCircle } from "lucide-react";
 import { getOrders, getRestaurant, updateOrderStatus } from "@/lib/data/mock-store";
 import { getRemoteOrders, updateRemoteOrderStatus } from "@/lib/data/supabase-orders";
 import { cn, formatCurrency, formatDateTime, formatScheduledFor } from "@/lib/utils";
@@ -133,6 +133,54 @@ export function OrdersKanban() {
   const [activeStatus, setActiveStatus] = useState<OrderStatus>("new");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const soundEnabledRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const knownNewOrderIdsRef = useRef<Set<string>>(new Set());
+
+  function playNewOrderSound() {
+    const context = audioContextRef.current;
+    if (!context || context.state !== "running") return;
+
+    const start = context.currentTime + 0.03;
+    const notes = [
+      { at: 0, frequency: 880 },
+      { at: 0.2, frequency: 1175 },
+      { at: 0.4, frequency: 880 },
+      { at: 0.75, frequency: 880 },
+      { at: 0.95, frequency: 1175 },
+      { at: 1.15, frequency: 880 }
+    ];
+
+    notes.forEach(({ at, frequency }) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(frequency, start + at);
+      gain.gain.setValueAtTime(0.0001, start + at);
+      gain.gain.exponentialRampToValueAtTime(0.3, start + at + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + at + 0.16);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start + at);
+      oscillator.stop(start + at + 0.17);
+    });
+  }
+
+  async function toggleSound() {
+    if (soundEnabledRef.current) {
+      soundEnabledRef.current = false;
+      setSoundEnabled(false);
+      return;
+    }
+
+    const context = audioContextRef.current ?? new AudioContext();
+    audioContextRef.current = context;
+    await context.resume();
+    soundEnabledRef.current = true;
+    setSoundEnabled(true);
+    playNewOrderSound();
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -142,10 +190,19 @@ export function OrdersKanban() {
       const remoteOrders = await getRemoteOrders(restaurantSlug).catch(() => null);
       if (ignore) return;
       const currentOrders = remoteOrders ?? getOrders();
+      const currentNewOrderIds = currentOrders.filter((order) => order.status === "new").map((order) => order.id);
       setOrders(currentOrders);
       if (firstLoad) {
         firstLoad = false;
+        knownNewOrderIdsRef.current = new Set(currentNewOrderIds);
         setSelectedOrderId(currentOrders.find((order) => order.status === "new")?.id ?? currentOrders[0]?.id ?? null);
+      } else {
+        const hasNewArrival = currentNewOrderIds.some((id) => !knownNewOrderIdsRef.current.has(id));
+        if (hasNewArrival && soundEnabledRef.current) {
+          playNewOrderSound();
+          window.navigator.vibrate?.([250, 120, 250, 120, 350]);
+        }
+        currentNewOrderIds.forEach((id) => knownNewOrderIdsRef.current.add(id));
       }
     }
 
@@ -199,6 +256,17 @@ export function OrdersKanban() {
         <div className="lg:shrink-0">
           <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900 lg:text-[32px]">Pedidos</h1>
           <p className="mt-1 text-sm text-slate-500">Acompanhe e atualize o andamento de cada pedido em tempo real.</p>
+          <button
+            className={cn(
+              "mt-3 inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition",
+              soundEnabled ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+            )}
+            onClick={() => void toggleSound()}
+            type="button"
+          >
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            {soundEnabled ? "Alerta sonoro ativo" : "Ativar alerta sonoro"}
+          </button>
         </div>
         <div className="grid grid-cols-3 gap-3 lg:flex-1">
           <AdminStatCard className="rounded-2xl shadow-[0_4px_18px_rgba(36,26,23,0.06)]" label="Pedidos em andamento" value={totalOpenOrders} icon={TimerReset} tone="violet" />
