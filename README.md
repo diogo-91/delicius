@@ -38,3 +38,13 @@ npm run dev
 ```
 
 Crie `.env.local` a partir de `.env.example` quando for conectar no Supabase.
+
+## Impressao automatica no caixa (Windows)
+
+Defina a impressora termica de 80 mm como impressora padrao do Windows e abra o painel por um atalho do Chrome com este destino:
+
+```text
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --app=https://dgourmet.com.br/dashboard/pedidos
+```
+
+Depois de entrar no painel, ative as opcoes `Alerta sonoro` e `Impressao automatica`. O parametro `--kiosk-printing` permite imprimir na impressora padrao sem abrir a janela de confirmacao.
