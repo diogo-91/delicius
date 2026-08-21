@@ -12,6 +12,8 @@ import { AdminInput } from "@/components/admin/ui/input";
 import { AdminStatCard } from "@/components/admin/ui/stat-card";
 
 const restaurantSlug = "delicious-gourmet-bolos-e-salgados";
+const autoPrintPreferenceKey = "dgourmet.auto-print";
+const printedOrdersStorageKey = "dgourmet.printed-orders";
 
 const statuses: Array<{ status: OrderStatus; title: string; shortTitle: string; icon: typeof Clock; dot: string; activePill: string }> = [
   { status: "new", title: "Novos pedidos", shortTitle: "Novo", icon: Clock, dot: "bg-brand-600", activePill: "border-brand-200 bg-brand-50 text-brand-700" },
@@ -66,8 +68,22 @@ function escapeHtml(value: string) {
 }
 
 function printOrder(order: Order, restaurantName: string) {
-  const printWindow = window.open("", "_blank", "width=380,height=600");
-  if (!printWindow) return;
+  const printFrame = document.createElement("iframe");
+  printFrame.setAttribute("aria-hidden", "true");
+  printFrame.style.position = "fixed";
+  printFrame.style.right = "-10000px";
+  printFrame.style.bottom = "0";
+  printFrame.style.width = "80mm";
+  printFrame.style.height = "1px";
+  printFrame.style.border = "0";
+  document.body.appendChild(printFrame);
+
+  const printWindow = printFrame.contentWindow;
+  const printDocument = printFrame.contentDocument;
+  if (!printWindow || !printDocument) {
+    printFrame.remove();
+    return;
+  }
 
   const itemsHtml = order.items
     .map(
@@ -82,7 +98,7 @@ function printOrder(order: Order, restaurantName: string) {
     )
     .join("");
 
-  printWindow.document.write(`
+  printDocument.write(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -120,10 +136,18 @@ function printOrder(order: Order, restaurantName: string) {
       </body>
     </html>
   `);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.onafterprint = () => printWindow.close();
-  printWindow.print();
+  printDocument.close();
+
+  const removeFrame = () => {
+    window.setTimeout(() => printFrame.remove(), 500);
+  };
+
+  printWindow.onafterprint = removeFrame;
+  window.setTimeout(() => {
+    printWindow.focus();
+    printWindow.print();
+    window.setTimeout(() => printFrame.remove(), 10000);
+  }, 150);
 }
 
 export function OrdersKanban() {
@@ -134,9 +158,12 @@ export function OrdersKanban() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
   const soundEnabledRef = useRef(false);
+  const autoPrintEnabledRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const knownNewOrderIdsRef = useRef<Set<string>>(new Set());
+  const printedOrderIdsRef = useRef<Set<string>>(new Set());
 
   function playNewOrderSound() {
     const context = audioContextRef.current;
@@ -223,6 +250,40 @@ export function OrdersKanban() {
     playNewOrderSound();
   }
 
+  function savePrintedOrderIds() {
+    const recentIds = Array.from(printedOrderIdsRef.current).slice(-200);
+    printedOrderIdsRef.current = new Set(recentIds);
+    window.localStorage.setItem(printedOrdersStorageKey, JSON.stringify(recentIds));
+  }
+
+  function markOrderAsPrinted(orderId: string) {
+    printedOrderIdsRef.current.add(orderId);
+    savePrintedOrderIds();
+  }
+
+  function toggleAutoPrint() {
+    const nextValue = !autoPrintEnabledRef.current;
+    autoPrintEnabledRef.current = nextValue;
+    setAutoPrintEnabled(nextValue);
+    window.localStorage.setItem(autoPrintPreferenceKey, nextValue ? "enabled" : "disabled");
+  }
+
+  useEffect(() => {
+    const autoPrintPreference = window.localStorage.getItem(autoPrintPreferenceKey) === "enabled";
+    const storedPrintedOrderIds = window.localStorage.getItem(printedOrdersStorageKey);
+
+    autoPrintEnabledRef.current = autoPrintPreference;
+    setAutoPrintEnabled(autoPrintPreference);
+
+    if (storedPrintedOrderIds) {
+      try {
+        printedOrderIdsRef.current = new Set(JSON.parse(storedPrintedOrderIds) as string[]);
+      } catch {
+        window.localStorage.removeItem(printedOrdersStorageKey);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     let ignore = false;
     let firstLoad = true;
@@ -236,12 +297,23 @@ export function OrdersKanban() {
       if (firstLoad) {
         firstLoad = false;
         knownNewOrderIdsRef.current = new Set(currentNewOrderIds);
+        currentNewOrderIds.forEach((id) => printedOrderIdsRef.current.add(id));
+        savePrintedOrderIds();
         setSelectedOrderId(currentOrders.find((order) => order.status === "new")?.id ?? currentOrders[0]?.id ?? null);
       } else {
-        const hasNewArrival = currentNewOrderIds.some((id) => !knownNewOrderIdsRef.current.has(id));
-        if (hasNewArrival && soundEnabledRef.current) {
+        const newArrivals = currentOrders.filter(
+          (order) => order.status === "new" && !knownNewOrderIdsRef.current.has(order.id)
+        );
+        if (newArrivals.length > 0 && soundEnabledRef.current) {
           playNewOrderSound();
           window.navigator.vibrate?.([250, 120, 250, 120, 350]);
+        }
+        if (autoPrintEnabledRef.current) {
+          newArrivals.forEach((order) => {
+            if (printedOrderIdsRef.current.has(order.id)) return;
+            markOrderAsPrinted(order.id);
+            printOrder(order, restaurant.name);
+          });
         }
         currentNewOrderIds.forEach((id) => knownNewOrderIdsRef.current.add(id));
       }
@@ -297,17 +369,30 @@ export function OrdersKanban() {
         <div className="lg:shrink-0">
           <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900 lg:text-[32px]">Pedidos</h1>
           <p className="mt-1 text-sm text-slate-500">Acompanhe e atualize o andamento de cada pedido em tempo real.</p>
-          <button
-            className={cn(
-              "mt-3 inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition",
-              soundEnabled ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
-            )}
-            onClick={() => void toggleSound()}
-            type="button"
-          >
-            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-            {soundEnabled ? "Alerta sonoro ativo" : "Ativar alerta sonoro"}
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className={cn(
+                "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition",
+                soundEnabled ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+              )}
+              onClick={() => void toggleSound()}
+              type="button"
+            >
+              {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+              {soundEnabled ? "Alerta sonoro ativo" : "Ativar alerta sonoro"}
+            </button>
+            <button
+              className={cn(
+                "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition",
+                autoPrintEnabled ? "bg-blue-50 text-blue-700 hover:bg-blue-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              )}
+              onClick={toggleAutoPrint}
+              type="button"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              {autoPrintEnabled ? "Impressão automática ativa" : "Ativar impressão automática"}
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-3 lg:flex-1">
           <AdminStatCard className="rounded-2xl shadow-[0_4px_18px_rgba(36,26,23,0.06)]" label="Pedidos em andamento" value={totalOpenOrders} icon={TimerReset} tone="violet" />
