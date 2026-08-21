@@ -21,7 +21,19 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  await supabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
+
+  if (data.user && request.nextUrl.pathname.startsWith("/dashboard")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (profile?.role === "cashier" && request.nextUrl.pathname !== "/dashboard/pedidos") {
+      return NextResponse.redirect(new URL("/dashboard/pedidos", request.url));
+    }
+  }
 
   return response;
 }

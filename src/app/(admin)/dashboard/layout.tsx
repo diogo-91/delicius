@@ -10,5 +10,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login?next=/dashboard");
   }
 
-  return <AdminShell user={data.user}>{children}</AdminShell>;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+  const role = profile?.role === "owner" ? "owner" : "cashier";
+
+  return <AdminShell user={data.user} role={role}>{children}</AdminShell>;
 }

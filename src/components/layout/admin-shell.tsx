@@ -38,10 +38,13 @@ const nav = [
   { href: "/dashboard/empresa", label: "Empresa", icon: Building2 }
 ];
 
-function SidebarNav({ pathname, onNavigate, collapsed }: { pathname: string; onNavigate?: () => void; collapsed?: boolean }) {
+type AdminRole = "owner" | "cashier";
+
+function SidebarNav({ pathname, role, onNavigate, collapsed }: { pathname: string; role: AdminRole; onNavigate?: () => void; collapsed?: boolean }) {
+  const visibleNav = role === "cashier" ? nav.filter((item) => item.href === "/dashboard/pedidos") : nav;
   return (
     <nav className="relative space-y-1">
-      {nav.map((item) => {
+      {visibleNav.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href;
         return (
@@ -88,6 +91,7 @@ function SidebarProfile({
   email,
   initial,
   restaurantSlug,
+  role,
   collapsed,
   open,
   onToggle,
@@ -98,6 +102,7 @@ function SidebarProfile({
   email?: string;
   initial: string;
   restaurantSlug: string;
+  role: AdminRole;
   collapsed?: boolean;
   open: boolean;
   onToggle: () => void;
@@ -117,15 +122,17 @@ function SidebarProfile({
               </div>
             )}
             {!collapsed && <div className="my-1 h-px bg-[#E5E7EB]/50" />}
-            <Link
-              href={`/cardapio/${restaurantSlug}`}
-              target="_blank"
-              className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-              onClick={onClose}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Ver cardápio
-            </Link>
+            {role === "owner" && (
+              <Link
+                href={`/cardapio/${restaurantSlug}`}
+                target="_blank"
+                className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                onClick={onClose}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Ver cardápio
+              </Link>
+            )}
             <button
               className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-xs font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-700"
               onClick={onSignOut}
@@ -160,7 +167,7 @@ function SidebarProfile({
   );
 }
 
-export function AdminShell({ children, user }: { children: React.ReactNode; user: User }) {
+export function AdminShell({ children, user, role }: { children: React.ReactNode; user: User; role: AdminRole }) {
   const pathname = usePathname();
   const router = useRouter();
   const restaurant = getRestaurant();
@@ -228,7 +235,7 @@ export function AdminShell({ children, user }: { children: React.ReactNode; user
         )}
 
         <div className={cn("relative flex-1 overflow-y-auto py-4", collapsed ? "px-2" : "px-3")}>
-          <SidebarNav pathname={pathname} collapsed={collapsed} />
+          <SidebarNav pathname={pathname} role={role} collapsed={collapsed} />
         </div>
 
         <div className="relative shrink-0 space-y-2 border-t border-white/10 p-3">
@@ -237,6 +244,7 @@ export function AdminShell({ children, user }: { children: React.ReactNode; user
             email={user.email}
             initial={initial}
             restaurantSlug={restaurant.slug}
+            role={role}
             collapsed={collapsed}
             open={profileOpen}
             onToggle={() => setProfileOpen((current) => !current)}
@@ -278,7 +286,7 @@ export function AdminShell({ children, user }: { children: React.ReactNode; user
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-4">
-              <SidebarNav pathname={pathname} onNavigate={() => setMobileNavOpen(false)} />
+              <SidebarNav pathname={pathname} role={role} onNavigate={() => setMobileNavOpen(false)} />
             </div>
             <div className="shrink-0 space-y-2 border-t border-white/10 p-3">
               <SidebarProfile
@@ -286,6 +294,7 @@ export function AdminShell({ children, user }: { children: React.ReactNode; user
                 email={user.email}
                 initial={initial}
                 restaurantSlug={restaurant.slug}
+                role={role}
                 open={mobileProfileOpen}
                 onToggle={() => setMobileProfileOpen((current) => !current)}
                 onClose={() => setMobileProfileOpen(false)}

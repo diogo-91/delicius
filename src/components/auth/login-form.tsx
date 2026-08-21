@@ -30,13 +30,6 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
       return;
     }
 
-    if (next.startsWith("/dashboard")) {
-      await supabase.rpc("ensure_owner_profile", {
-        restaurant_name: "Meu negócio",
-        owner_name: email
-      });
-    }
-
     router.push(next);
     router.refresh();
   }
