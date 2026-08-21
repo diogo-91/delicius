@@ -197,11 +197,11 @@ export function AdminShell({ children, user }: { children: React.ReactNode; user
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#EADFC5] lg:h-screen lg:flex-row lg:overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-[#F7F3EE] lg:h-screen lg:flex-row lg:overflow-hidden">
       <aside
         className={cn(
-          "relative hidden shrink-0 flex-col overflow-hidden bg-gradient-to-b from-[#5c3020] via-[#4f2618] to-[#3c1c11] transition-[width] duration-200 lg:flex",
-          collapsed ? "w-[76px]" : "w-60"
+          "relative hidden shrink-0 flex-col overflow-hidden bg-gradient-to-b from-[#3C1C13] via-[#30150F] to-[#21100C] transition-[width] duration-200 lg:flex",
+          collapsed ? "w-[76px]" : "w-[232px]"
         )}
       >
         <div
@@ -312,7 +312,7 @@ export function AdminShell({ children, user }: { children: React.ReactNode; user
         <Menu className="h-5 w-5" />
       </button>
 
-      <main className="flex w-full flex-1 flex-col overflow-y-auto px-4 pb-4 pt-20 sm:px-6 sm:pb-6 sm:pt-20 lg:mx-auto lg:min-h-0 lg:max-w-[1600px] lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-6">{children}</main>
+      <main className="flex w-full flex-1 flex-col overflow-y-auto px-4 pb-6 pt-20 sm:px-6 sm:pb-8 sm:pt-20 lg:mx-auto lg:min-h-0 lg:max-w-[1580px] lg:overflow-y-auto lg:px-8 lg:pb-8 lg:pt-7">{children}</main>
     </div>
   );
 }

@@ -29,10 +29,10 @@ export function AdminStatCard({
   trend?: number;
 }) {
   return (
-    <div className="group flex h-full flex-col rounded-card border border-[#E5E7EB] bg-white p-4 shadow-card transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card-hover">
+    <div className="group flex h-full flex-col rounded-[18px] bg-white p-4 shadow-[0_10px_32px_rgba(79,38,24,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_38px_rgba(79,38,24,0.11)]">
       <div className="flex items-center justify-between gap-2">
         {Icon && (
-          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-150 group-hover:scale-110", toneStyles[tone])}>
+          <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105", toneStyles[tone])}>
             <Icon className="h-4 w-4" strokeWidth={2.25} />
           </span>
         )}
@@ -42,8 +42,8 @@ export function AdminStatCard({
           </span>
         )}
       </div>
-      <p className="mt-2.5 text-xs font-medium leading-tight text-[#6B7280]">{label}</p>
-      <strong className="mt-1 text-xl font-bold tracking-tight text-[#111827]">
+      <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.08em] leading-tight text-[#8A756C]">{label}</p>
+      <strong className="mt-1.5 text-[22px] font-bold tracking-tight text-[#2B1711]">
         {currency && typeof value === "number" ? formatCurrency(value) : value}
       </strong>
     </div>
