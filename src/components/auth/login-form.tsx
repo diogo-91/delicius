@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GoogleIcon } from "@/components/auth/google-icon";
 
 export function LoginForm({ next = "/dashboard" }: { next?: string }) {
   const router = useRouter();
@@ -40,23 +39,6 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
     router.refresh();
   }
 
-  async function signInWithGoogle() {
-    setLoading(true);
-    setMessage("");
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
-      }
-    });
-
-    if (error) {
-      setLoading(false);
-      setMessage(error.message);
-    }
-  }
-
   return (
     <form
       className="mt-6 space-y-4"
@@ -69,10 +51,6 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
       <Input type="password" placeholder="Senha" value={password} onChange={(event) => setPassword(event.target.value)} required />
       <Button className="w-full" disabled={loading} type="submit">
         {loading ? "Entrando..." : "Entrar"}
-      </Button>
-      <Button variant="secondary" className="w-full" disabled={loading} onClick={signInWithGoogle} type="button">
-        <GoogleIcon />
-        Entrar com Google
       </Button>
       {message && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p>}
     </form>
