@@ -104,16 +104,17 @@ export function getCustomers() {
   return read<Customer[]>(CUSTOMERS_KEY, customers);
 }
 
-export function createOrder(payload: {
+type CreateOrderPayload = {
   customer: Pick<Customer, "name" | "phone" | "address">;
   type: Order["type"];
   paymentMethod: Order["paymentMethod"];
   items: CartItem[];
   discount?: number;
   couponCode?: string;
-}) {
+};
+
+export function buildOrder(payload: CreateOrderPayload) {
   const allOrders = getOrders();
-  const allCustomers = getCustomers();
   const subtotal = payload.items.reduce((sum, item) => {
     const addonsTotal = item.addons.reduce((total, addon) => total + addon.price, 0);
     return sum + (item.unitPrice + addonsTotal) * item.quantity;
@@ -152,6 +153,15 @@ export function createOrder(payload: {
     createdAt: new Date().toISOString(),
     history: [{ id: `hist_${Date.now()}`, status: "new", createdAt: new Date().toISOString(), note: "Pedido enviado pelo cardapio publico" }]
   };
+
+  return order;
+}
+
+export function createOrder(payload: CreateOrderPayload) {
+  const allOrders = getOrders();
+  const allCustomers = getCustomers();
+  const order = buildOrder(payload);
+  const customer = order.customer;
 
   write(ORDERS_KEY, [order, ...allOrders]);
   write(CUSTOMERS_KEY, [customer, ...allCustomers]);

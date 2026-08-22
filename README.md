@@ -48,3 +48,20 @@ Defina a impressora termica de 80 mm como impressora padrao do Windows e abra o 
 ```
 
 Depois de entrar no painel, ative as opcoes `Alerta sonoro` e `Impressao automatica`. O parametro `--kiosk-printing` permite imprimir na impressora padrao sem abrir a janela de confirmacao.
+
+## Gateway Asaas
+
+O checkout transparente utiliza Pix e cartao de credito. Antes do deploy, aplique no Supabase a migracao `supabase/migrations/012_asaas_payment_sessions.sql` e configure no ambiente do servidor:
+
+```env
+ASAAS_API_KEY=
+ASAAS_API_URL=https://api.asaas.com/v3
+ASAAS_ENVIRONMENT=production
+ASAAS_WEBHOOK_TOKEN=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_APP_URL=https://dgourmet.com.br
+```
+
+Cadastre no Asaas o webhook `https://dgourmet.com.br/api/webhooks/asaas` com o mesmo `ASAAS_WEBHOOK_TOKEN`. Ative os eventos `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED` e `PAYMENT_DELETED` somente depois do deploy.
+
+O cartao de debito permanece visivel como indisponivel porque a API publica do Asaas nao permite captura transparente dessa modalidade. Nunca adicione chaves do Asaas a variaveis `NEXT_PUBLIC_*`.

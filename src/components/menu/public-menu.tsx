@@ -1,11 +1,11 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChefHat, Clock, CreditCard, Crown, Flame, Gift, Heart, ListFilter, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { CalendarDays, Check, ChefHat, Clock, Copy, CreditCard, Crown, Flame, Gift, Heart, ListFilter, LoaderCircle, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import { STORE_UPDATED_EVENT, createOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
+import { STORE_UPDATED_EVENT, buildOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
-import { createRemoteOrder, getMyRemoteOrders } from "@/lib/data/supabase-orders";
+import { getMyRemoteOrders } from "@/lib/data/supabase-orders";
 import { getRemoteCustomerProfile, saveRemoteCustomerProfile } from "@/lib/data/supabase-customer-profile";
 import { getPublicRestaurantBySlug } from "@/lib/data/supabase-restaurant";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -255,8 +255,12 @@ export function PublicMenu() {
   const [historyOrder, setHistoryOrder] = useState<Order | null>(null);
   const [mobileCustomerOpen, setMobileCustomerOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "approved">("idle");
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "pending" | "approved" | "failed">("idle");
   const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<Order | null>(null);
+  const [pixPayment, setPixPayment] = useState<{ encodedImage: string; payload: string; expirationDate: string } | null>(null);
+  const [payerForm, setPayerForm] = useState({ cpfCnpj: "", email: "" });
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponMessage, setCouponMessage] = useState("");
@@ -275,8 +279,40 @@ export function PublicMenu() {
     number: "",
     expiry: "",
     cvv: "",
-    cpf: ""
+    cpf: "",
+    email: "",
+    postalCode: "",
+    addressNumber: ""
   });
+
+  useEffect(() => {
+    if (user?.email) setPayerForm((current) => ({ ...current, email: current.email || user.email || "" }));
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (!paymentSessionId || paymentStatus !== "pending") return;
+    const interval = window.setInterval(async () => {
+      const response = await fetch(`/api/payments/asaas/status?sessionId=${encodeURIComponent(paymentSessionId)}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const result = (await response.json()) as { status: string; customer_order_id?: string };
+      if (result.status === "approved" && result.customer_order_id && pendingOrder) {
+        setPaymentStatus("approved");
+        setPaymentMessage("Pagamento confirmado. Pedido enviado para a loja!");
+        setCreatedOrder({ ...pendingOrder, id: result.customer_order_id });
+        setOrderDetailsOpen(false);
+        setCart([]);
+        setPaymentSessionId(null);
+        setPixPayment(null);
+        setCouponCode("");
+        setAppliedCoupon(null);
+      } else if (["failed", "refunded", "cancelled"].includes(result.status)) {
+        setPaymentStatus("failed");
+        setPaymentMessage("O pagamento nao foi concluido. Tente novamente.");
+        setPaymentSessionId(null);
+      }
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, [paymentSessionId, paymentStatus, pendingOrder]);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 30000);
@@ -593,19 +629,29 @@ export function PublicMenu() {
     setCart((current) => current.flatMap((item, itemIndex) => (itemIndex === index ? (quantity <= 0 ? [] : [{ ...item, quantity }]) : [item])));
   }
 
-  async function submitOrder(items: CartItem[]) {
+  async function startPayment(items: CartItem[]) {
     const checkoutCustomer = addressMode === "saved" ? customerProfile : customer;
-    const customerName = checkoutCustomer.name || customer.name || "Cliente Teste";
-    const customerPhone = checkoutCustomer.phone || customer.phone || "(15) 99999-0000";
+    const customerName = checkoutCustomer.name || customer.name;
+    const customerPhone = checkoutCustomer.phone || customer.phone;
 
     if (items.length === 0) return;
+    if (!customerName.trim() || customerPhone.replace(/\D/g, "").length < 10) {
+      setPaymentMessage("Informe seu nome e telefone antes de continuar.");
+      return;
+    }
     if (type === "delivery" && addressMode === "saved" && !formatCustomerAddress(customerProfile)) {
       setPaymentMessage("Cadastre um endereco na Area do cliente ou selecione outro endereco para entrega.");
       return;
     }
-    if (paymentStatus !== "approved") {
-      setPaymentStatus("approved");
-      setPaymentMessage("Pagamento teste aprovado automaticamente.");
+    const payerCpf = paymentMethod === "credit_card" ? cardForm.cpf : payerForm.cpfCnpj;
+    const payerEmail = paymentMethod === "credit_card" ? cardForm.email : payerForm.email;
+    if (![11, 14].includes(payerCpf.replace(/\D/g, "").length) || !payerEmail.includes("@")) {
+      setPaymentMessage("Informe um CPF/CNPJ e um e-mail validos para o pagamento.");
+      return;
+    }
+    if (paymentMethod === "credit_card" && (!cardForm.holder || !cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.postalCode || !cardForm.addressNumber)) {
+      setPaymentMessage("Preencha todos os dados do cartao e do titular.");
+      return;
     }
 
     const address =
@@ -616,8 +662,7 @@ export function PublicMenu() {
         : undefined;
 
     const wasGuest = !customerIsAuthenticated;
-
-    const order = createOrder({
+    const order = buildOrder({
       customer: {
         name: customerName,
         phone: customerPhone,
@@ -629,35 +674,52 @@ export function PublicMenu() {
       discount,
       couponCode: appliedCoupon?.code
     });
-    setCreatedOrder(order);
-    setOrderDetailsOpen(false);
-    setCart([]);
-    setPaymentStatus("idle");
-    setPaymentMessage("");
-    setCouponCode("");
-    setAppliedCoupon(null);
-    setCouponMessage("");
-    setCustomer(customerProfile);
-    setSlotPickerOpen(false);
-    setSelectedSlot(null);
-    setLastOrderWasGuest(wasGuest);
-    setGuestSavePromptDismissed(false);
-
+    setPaymentStatus("processing");
+    setPaymentMessage("Conectando ao Asaas...");
     if (wasGuest && supabaseConfigured) {
       try {
         const supabase = createSupabaseBrowserClient();
         await supabase.auth.signInAnonymously();
       } catch {
-        // "Anonymous Sign-ins" pode ainda nao estar habilitado no projeto Supabase.
-        // O pedido local ja foi criado; a sincronizacao abaixo cai no aviso padrao.
+        // Pagamento como convidado continua disponivel mesmo sem login anonimo no Supabase.
       }
     }
 
     try {
-      const remoteOrder = await createRemoteOrder(restaurant.slug, order);
-      if (remoteOrder) setCreatedOrder(remoteOrder);
+      const response = await fetch("/api/payments/asaas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          restaurantSlug: restaurant.slug,
+          order,
+          cpfCnpj: payerCpf,
+          email: payerEmail,
+          card: paymentMethod === "credit_card" ? {
+            holderName: cardForm.holder,
+            number: cardForm.number,
+            expiry: cardForm.expiry,
+            ccv: cardForm.cvv,
+            cpfCnpj: cardForm.cpf,
+            email: cardForm.email,
+            postalCode: cardForm.postalCode,
+            addressNumber: cardForm.addressNumber
+          } : undefined
+        })
+      });
+      const result = (await response.json()) as { error?: string; sessionId?: string; status?: string; pix?: { encodedImage: string; payload: string; expirationDate: string } };
+      if (!response.ok || !result.sessionId) throw new Error(result.error || "Nao foi possivel criar o pagamento.");
+      setPendingOrder(order);
+      setPaymentSessionId(result.sessionId);
+      setPixPayment(result.pix ?? null);
+      setPaymentStatus("pending");
+      setPaymentMessage(paymentMethod === "pix" ? "Escaneie o QR Code ou copie o codigo Pix. A confirmacao e automatica." : "Pagamento enviado. Aguardando confirmacao do Asaas.");
+      setSlotPickerOpen(false);
+      setSelectedSlot(null);
+      setLastOrderWasGuest(wasGuest);
+      setGuestSavePromptDismissed(false);
     } catch (error) {
-      setPaymentMessage(error instanceof Error ? `Pedido salvo, mas houve um erro ao enviar para o painel: ${error.message}` : "Pedido salvo, mas nao foi possivel enviar para o painel.");
+      setPaymentStatus("failed");
+      setPaymentMessage(error instanceof Error ? error.message : "Nao foi possivel processar o pagamento.");
     }
   }
 
@@ -666,12 +728,12 @@ export function PublicMenu() {
       setPaymentMessage("A loja está fora do horário de funcionamento. Não é possível finalizar pedidos agora.");
       return;
     }
-    await submitOrder(cart);
+    await startPayment(cart);
   }
 
   async function confirmScheduling() {
     if (!selectedSlot) return;
-    await submitOrder(cart.map((item) => ({ ...item, scheduledFor: selectedSlot.iso })));
+    await startPayment(cart.map((item) => ({ ...item, scheduledFor: selectedSlot.iso })));
   }
 
   async function signInWithGoogle() {
@@ -750,23 +812,12 @@ export function PublicMenu() {
   }
 
   function selectPaymentMethod(method: PaymentMethod) {
+    if (paymentStatus === "pending" || paymentStatus === "processing") return;
     setPaymentMethod(method);
     setPaymentStatus("idle");
     setPaymentMessage("");
-  }
-
-  function simulatePayment() {
-    if (paymentMethod !== "pix" && (!cardForm.holder || !cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.cpf)) {
-      setCardForm({
-        holder: "Cliente Teste",
-        number: "4111 1111 1111 1111",
-        expiry: "12/30",
-        cvv: "123",
-        cpf: "123.456.789-09"
-      });
-    }
-    setPaymentStatus("approved");
-    setPaymentMessage(paymentMethod === "pix" ? "Pix teste aprovado na simulacao." : "Cartao teste preenchido e aprovado na simulacao do Asaas.");
+    setPaymentSessionId(null);
+    setPixPayment(null);
   }
 
   function applyCoupon() {
@@ -1151,39 +1202,47 @@ export function PublicMenu() {
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Forma de pagamento</p>
           <div className="grid gap-2 sm:grid-cols-3">
             {[
-              { value: "pix", label: "Pix" },
-              { value: "credit_card", label: "Cartao de credito" },
-              { value: "debit_card", label: "Cartao de debito" }
+              { value: "pix", label: "Pix", disabled: false },
+              { value: "credit_card", label: "Cartao de credito", disabled: false },
+              { value: "debit_card", label: "Debito online", disabled: true }
             ].map((option) => (
               <button
                 key={option.value}
                 className={`h-10 rounded-xl border px-3 text-sm font-semibold transition ${
-                  paymentMethod === option.value ? "border-brand-600 bg-brand-500 text-white shadow-soft" : "border-line bg-white text-ink hover:border-brand-500"
+                  option.disabled ? "cursor-not-allowed border-line bg-slate-100 text-muted opacity-60" : paymentMethod === option.value ? "border-brand-600 bg-brand-500 text-white shadow-soft" : "border-line bg-white text-ink hover:border-brand-500"
                 }`}
-                onClick={() => selectPaymentMethod(option.value as PaymentMethod)}
+                onClick={() => !option.disabled && selectPaymentMethod(option.value as PaymentMethod)}
+                disabled={option.disabled}
+                title={option.disabled ? "O Asaas ainda nao oferece debito no checkout transparente pela API publica." : undefined}
                 type="button"
               >
                 {option.label}
               </button>
             ))}
           </div>
+          <p className="mt-2 text-[11px] text-muted">Débito online será ativado quando o Asaas disponibilizar essa modalidade na API de checkout transparente.</p>
         </div>
 
         {paymentMethod === "pix" ? (
           <div className="rounded-xl border border-brand-100 bg-brand-50 p-3">
-            <div className="flex gap-3">
-              <div className="grid h-24 w-24 shrink-0 grid-cols-5 gap-1 rounded-lg bg-white p-2 ring-1 ring-brand-100">
-                {Array.from({ length: 25 }).map((_, index) => (
-                  <span key={index} className={`rounded-sm ${index % 2 === 0 || index % 7 === 0 ? "bg-navy-900" : "bg-slate-100"}`} />
-                ))}
+            {!pixPayment ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input className="bg-white" placeholder="CPF ou CNPJ" value={payerForm.cpfCnpj} onChange={(event) => setPayerForm({ ...payerForm, cpfCnpj: event.target.value })} />
+                <Input className="bg-white" type="email" placeholder="E-mail" value={payerForm.email} onChange={(event) => setPayerForm({ ...payerForm, email: event.target.value })} />
+                <p className="text-xs text-muted sm:col-span-2">O QR Code real será gerado pelo Asaas ao finalizar.</p>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ink">Pix copia e cola</p>
-                <p className="mt-1 break-all rounded-lg bg-white p-2 text-xs leading-5 text-muted ring-1 ring-brand-100">
-                  00020126580014br.gov.bcb.pix0136komanda-delicious-gourmet-mock520400005303986540{total.toFixed(2)}5802BR5925DELICIOUS GOURMET MOCK6008SOROCABA
-                </p>
+            ) : (
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <img className="h-36 w-36 shrink-0 rounded-xl bg-white p-2" src={`data:image/png;base64,${pixPayment.encodedImage}`} alt="QR Code Pix" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink">Pix Copia e Cola</p>
+                  <p className="mt-1 max-h-20 overflow-auto break-all rounded-lg bg-white p-2 text-xs leading-5 text-muted ring-1 ring-brand-100">{pixPayment.payload}</p>
+                  <Button variant="secondary" className="mt-2 h-9 rounded-lg" onClick={() => void navigator.clipboard.writeText(pixPayment.payload)} type="button">
+                    <Copy className="h-4 w-4" /> Copiar código Pix
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           <div className="grid gap-3 rounded-xl border border-line bg-white/60 p-3 sm:grid-cols-2">
@@ -1191,23 +1250,24 @@ export function PublicMenu() {
             <Input className="bg-white sm:col-span-2" placeholder="Numero do cartao" value={cardForm.number} onChange={(event) => setCardForm({ ...cardForm, number: event.target.value })} />
             <Input className="bg-white" placeholder="Validade MM/AA" value={cardForm.expiry} onChange={(event) => setCardForm({ ...cardForm, expiry: event.target.value })} />
             <Input className="bg-white" placeholder="CVV" value={cardForm.cvv} onChange={(event) => setCardForm({ ...cardForm, cvv: event.target.value })} />
-            <Input className="bg-white sm:col-span-2" placeholder="CPF do titular" value={cardForm.cpf} onChange={(event) => setCardForm({ ...cardForm, cpf: event.target.value })} />
+            <Input className="bg-white" placeholder="CPF/CNPJ do titular" value={cardForm.cpf} onChange={(event) => setCardForm({ ...cardForm, cpf: event.target.value })} />
+            <Input className="bg-white" type="email" placeholder="E-mail do titular" value={cardForm.email} onChange={(event) => setCardForm({ ...cardForm, email: event.target.value })} />
+            <Input className="bg-white" placeholder="CEP" value={cardForm.postalCode} onChange={(event) => setCardForm({ ...cardForm, postalCode: event.target.value })} />
+            <Input className="bg-white" placeholder="Número do endereço" value={cardForm.addressNumber} onChange={(event) => setCardForm({ ...cardForm, addressNumber: event.target.value })} />
+            <p className="text-xs text-muted sm:col-span-2">Se o cartão ainda não estiver habilitado na conta Asaas, o pagamento será recusado sem criar o pedido.</p>
           </div>
         )}
 
         <div className="rounded-xl border border-line bg-white/70 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-ink">Pagamento Asaas mock</p>
-              <p className="mt-1 text-xs text-muted">Nenhuma cobranca real sera criada nesta etapa.</p>
+              <p className="text-sm font-semibold text-ink">Pagamento seguro via Asaas</p>
+              <p className="mt-1 text-xs text-muted">Seus dados são processados de forma segura e não ficam armazenados.</p>
             </div>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatus === "approved" ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-muted"}`}>
-              {paymentStatus === "approved" ? "Aprovado" : "Aguardando"}
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatus === "approved" ? "bg-emerald-50 text-emerald-700" : paymentStatus === "failed" ? "bg-red-50 text-red-700" : "bg-slate-100 text-muted"}`}>
+              {paymentStatus === "approved" ? "Aprovado" : paymentStatus === "processing" ? "Processando" : paymentStatus === "failed" ? "Falhou" : "Aguardando"}
             </span>
           </div>
-          <Button variant="secondary" className="mt-3 h-10 w-full rounded-lg" onClick={simulatePayment} type="button">
-            Aprovar pagamento teste
-          </Button>
           {paymentMessage && <p className="mt-2 text-xs font-medium text-amber-700">{paymentMessage}</p>}
         </div>
 
@@ -1233,8 +1293,9 @@ export function PublicMenu() {
         </div>
 
         {storeAcceptingOrders ? (
-          <Button variant="cta" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={finishOrder} type="button">
-            FINALIZAR PEDIDO • {formatCurrency(total)}
+          <Button variant="cta" className="h-12 w-full rounded-xl" disabled={cart.length === 0 || paymentStatus === "processing" || paymentStatus === "pending"} onClick={finishOrder} type="button">
+            {paymentStatus === "processing" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+            {paymentStatus === "pending" ? "AGUARDANDO PAGAMENTO" : `PAGAR • ${formatCurrency(total)}`}
           </Button>
         ) : (
           <Button variant="cta" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={() => setSlotPickerOpen(true)} type="button">
@@ -2068,4 +2129,3 @@ export function PublicMenu() {
     </main>
   );
 }
-
