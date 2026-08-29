@@ -24,7 +24,6 @@ export type Restaurant = {
   slug: string;
   logoUrl?: string;
   coverUrl?: string;
-  bannerUrl?: string;
   address: string;
   openingHours: string;
   weeklySchedule?: WeekdaySchedule[];

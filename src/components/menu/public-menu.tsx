@@ -1443,13 +1443,15 @@ export function PublicMenu() {
         </div>
       </header>
 
-      <section className="w-full">
-        <img
-          src={restaurant.bannerUrl ?? "/banner.png"}
-          alt="Banner promocional"
-          className="aspect-[5/1] w-full bg-slate-100 object-cover"
-        />
-      </section>
+      {restaurant.coverUrl && (
+        <section className="w-full">
+          <img
+            src={restaurant.coverUrl}
+            alt={`Banner de ${restaurant.name}`}
+            className="aspect-[5/1] w-full bg-slate-100 object-cover"
+          />
+        </section>
+      )}
 
       <nav className="sticky top-[168px] z-20 w-full overflow-x-auto border-b border-line2 bg-white py-3 md:top-[135px]">
         <div className="mx-auto flex w-max min-w-full justify-center gap-3 px-4 xl:w-[80%]">
