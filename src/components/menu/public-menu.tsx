@@ -59,6 +59,7 @@ const customerProfileStorageKey = "kamanda.delicious.customer-profile";
 const cartStorageKey = "kamanda.delicious.cart";
 const reopenCartStorageKey = "kamanda.delicious.reopen-cart";
 const favoritesStorageKey = "kamanda.delicious.favorites";
+const pendingPaymentStorageKey = "kamanda.delicious.pending-payment";
 
 type CustomerForm = typeof defaultCustomer;
 
@@ -290,26 +291,51 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     if (user?.email) setPayerForm((current) => ({ ...current, email: current.email || user.email || "" }));
   }, [user?.email]);
 
+  // Resume a payment that was still pending when the tab was closed/refreshed,
+  // so the customer still sees the confirmation (and the backend gets polled).
+  useEffect(() => {
+    const raw = window.localStorage.getItem(pendingPaymentStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as { sessionId: string; order: Order; pix?: typeof pixPayment; createdAt: number };
+      if (!saved.sessionId || !saved.order || Date.now() - saved.createdAt > 45 * 60 * 1000) {
+        window.localStorage.removeItem(pendingPaymentStorageKey);
+        return;
+      }
+      setPendingOrder(saved.order);
+      setPaymentSessionId(saved.sessionId);
+      setPixPayment(saved.pix ?? null);
+      setPaymentMethod(saved.order.paymentMethod);
+      setPaymentStatus("pending");
+      setPaymentMessage("Retomando a confirmacao do seu pagamento...");
+      setCartModalOpen(true);
+    } catch {
+      window.localStorage.removeItem(pendingPaymentStorageKey);
+    }
+  }, []);
+
   useEffect(() => {
     if (!paymentSessionId || paymentStatus !== "pending") return;
     const interval = window.setInterval(async () => {
       const response = await fetch(`/api/payments/asaas/status?sessionId=${encodeURIComponent(paymentSessionId)}`, { cache: "no-store" });
       if (!response.ok) return;
       const result = (await response.json()) as { status: string; customer_order_id?: string };
-      if (result.status === "approved" && result.customer_order_id && pendingOrder) {
+      if (result.status === "approved" && result.customer_order_id) {
         setPaymentStatus("approved");
         setPaymentMessage("Pagamento confirmado. Pedido enviado para a loja!");
-        setCreatedOrder({ ...pendingOrder, id: result.customer_order_id });
+        if (pendingOrder) setCreatedOrder({ ...pendingOrder, id: result.customer_order_id });
         setOrderDetailsOpen(false);
         setCart([]);
         setPaymentSessionId(null);
         setPixPayment(null);
         setCouponCode("");
         setAppliedCoupon(null);
+        window.localStorage.removeItem(pendingPaymentStorageKey);
       } else if (["failed", "refunded", "cancelled"].includes(result.status)) {
         setPaymentStatus("failed");
         setPaymentMessage("O pagamento nao foi concluido. Tente novamente.");
         setPaymentSessionId(null);
+        window.localStorage.removeItem(pendingPaymentStorageKey);
       }
     }, 4000);
     return () => window.clearInterval(interval);
@@ -713,6 +739,10 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       setPaymentSessionId(result.sessionId);
       setPixPayment(result.pix ?? null);
       setPaymentStatus("pending");
+      window.localStorage.setItem(
+        pendingPaymentStorageKey,
+        JSON.stringify({ sessionId: result.sessionId, order, pix: result.pix ?? null, createdAt: Date.now() })
+      );
       setPaymentMessage(paymentMethod === "pix" ? "Escaneie o QR Code ou copie o codigo Pix. A confirmacao e automatica." : "Pagamento enviado. Aguardando confirmacao do Asaas.");
       setSlotPickerOpen(false);
       setSelectedSlot(null);
@@ -819,6 +849,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     setPaymentMessage("");
     setPaymentSessionId(null);
     setPixPayment(null);
+    window.localStorage.removeItem(pendingPaymentStorageKey);
   }
 
   function applyCoupon() {

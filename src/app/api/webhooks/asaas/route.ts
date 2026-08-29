@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { Order } from "@/types/domain";
+import { ensureOrderForSession, type AsaasPaymentSession } from "@/lib/asaas-session";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type AsaasWebhook = {
-  id: string;
+  id?: string;
   event: string;
+  dateCreated?: string;
   payment?: { id?: string; externalReference?: string };
 };
 
@@ -19,49 +23,52 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = (await request.json()) as AsaasWebhook;
-  if (!payload.id || !payload.event) return NextResponse.json({ error: "Evento invalido." }, { status: 400 });
+  if (!payload.event) return NextResponse.json({ error: "Evento invalido." }, { status: 400 });
+
+  // Asaas normally sends a unique `id`, but older/edge payloads may omit it —
+  // derive a stable dedupe key so we never reject (rejections pause the queue).
+  const eventId = payload.id
+    ?? `${payload.event}:${payload.payment?.id ?? payload.payment?.externalReference ?? "?"}:${payload.dateCreated ?? ""}`;
 
   const admin = createSupabaseAdminClient();
-  const { error: eventError } = await admin.from("asaas_webhook_events").insert({ id: payload.id, event_type: payload.event, payload });
+  const { error: eventError } = await admin.from("asaas_webhook_events").insert({ id: eventId, event_type: payload.event, payload });
   if (eventError && eventError.code !== "23505") return NextResponse.json({ error: "Falha ao registrar evento." }, { status: 500 });
 
   const paymentId = payload.payment?.id;
-  if (!paymentId) return NextResponse.json({ received: true });
-  const { data: session } = await admin.from("asaas_payment_sessions").select("*").eq("asaas_payment_id", paymentId).maybeSingle();
+  const externalReference = payload.payment?.externalReference;
+  if (!paymentId && !externalReference) return NextResponse.json({ received: true });
+
+  // Prefer matching by the Asaas payment id; fall back to externalReference
+  // (our session id) in case the payment id was never persisted on the session.
+  let session: AsaasPaymentSession | null = null;
+  if (paymentId) {
+    const { data } = await admin.from("asaas_payment_sessions").select("*").eq("asaas_payment_id", paymentId).maybeSingle();
+    session = data as AsaasPaymentSession | null;
+  }
+  if (!session && externalReference) {
+    const { data } = await admin.from("asaas_payment_sessions").select("*").eq("id", externalReference).maybeSingle();
+    session = data as AsaasPaymentSession | null;
+    if (session && paymentId && !session.asaas_payment_id) {
+      await admin.from("asaas_payment_sessions").update({ asaas_payment_id: paymentId }).eq("id", session.id);
+    }
+  }
   if (!session) return NextResponse.json({ received: true });
 
-  const status = approvedEvents.has(payload.event) ? "approved" : payload.event === "PAYMENT_REFUNDED" ? "refunded" : failedEvents.has(payload.event) ? "failed" : null;
+  const status = approvedEvents.has(payload.event)
+    ? "approved"
+    : payload.event === "PAYMENT_REFUNDED"
+      ? "refunded"
+      : failedEvents.has(payload.event)
+        ? "failed"
+        : null;
   if (!status) return NextResponse.json({ received: true });
 
-  let customerOrderId = session.customer_order_id as string | null;
-  if (status === "approved" && !customerOrderId) {
-    const order = session.order_data as Order;
-    const { count } = await admin.from("customer_orders").select("id", { count: "exact", head: true }).eq("restaurant_slug", session.restaurant_slug);
-    const code = `#${1026 + (count ?? 0)}`;
-    const now = new Date().toISOString();
-    const orderData: Order = {
-      ...order,
-      code,
-      status: "new",
-      total: Number(session.amount),
-      createdAt: now,
-      history: [{ id: `hist_${Date.now()}`, status: "new", createdAt: now, note: "Pagamento confirmado pelo Asaas" }]
-    };
-    const { data: inserted, error } = await admin.from("customer_orders").insert({
-      restaurant_slug: session.restaurant_slug,
-      code,
-      status: "new",
-      order_data: orderData,
-      customer_user_id: session.customer_user_id,
-      payment_session_id: session.id
-    }).select("id").single();
-    if (error?.code === "23505") {
-      const { data: existingOrder } = await admin.from("customer_orders").select("id").eq("payment_session_id", session.id).single();
-      customerOrderId = existingOrder?.id ?? null;
-    } else if (error) {
+  let customerOrderId = session.customer_order_id;
+  if (status === "approved") {
+    try {
+      customerOrderId = await ensureOrderForSession(admin, session);
+    } catch {
       return NextResponse.json({ error: "Falha ao liberar pedido." }, { status: 500 });
-    } else {
-      customerOrderId = inserted.id;
     }
   }
 

@@ -39,5 +39,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"]
+  // Exclude /api so webhooks and payment endpoints never depend on the
+  // middleware Supabase auth check (they do their own auth); middleware only
+  // needs to guard the /dashboard cashier redirect.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"]
 };

@@ -5,6 +5,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { coupons } from "@/lib/data/seed";
 import type { Order, Product } from "@/types/domain";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 type CardInput = {
   holderName: string;
   number: string;
