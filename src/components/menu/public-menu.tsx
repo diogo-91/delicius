@@ -20,7 +20,7 @@ import { getCrossSellProducts, getHighlightProducts } from "@/lib/menu/highlight
 import { SocialProof, placeholderReviews } from "@/components/menu/social-proof";
 
 const categoryIcons = [Gift, Star, Flame, Sparkles, Utensils, Utensils, ShoppingBag, ShoppingBag];
-const menuSlug = "delicious-gourmet-bolos-e-salgados";
+const defaultMenuSlug = "delicious-gourmet-bolos-e-salgados";
 
 const categoryHeaderBadges = [
   { icon: Heart, title: "Feitas com amor" },
@@ -223,7 +223,8 @@ function OrderTimeline({ order }: { order: Order }) {
   );
 }
 
-export function PublicMenu() {
+export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
+  const menuSlug = slug;
   const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   const [restaurant, setRestaurant] = useState(() => getRestaurant());
   const [categories, setCategories] = useState<Category[]>(() => (supabaseConfigured ? [] : getCategories()));
@@ -363,7 +364,7 @@ export function PublicMenu() {
       ignore = true;
       window.clearInterval(interval);
     };
-  }, []);
+  }, [menuSlug]);
 
   useEffect(() => {
     if (!user && !localCustomerSession) return;
@@ -1443,10 +1444,10 @@ export function PublicMenu() {
         </div>
       </header>
 
-      {restaurant.coverUrl && (
+      {restaurant.bannerUrl && (
         <section className="w-full">
           <img
-            src={restaurant.coverUrl}
+            src={restaurant.bannerUrl}
             alt={`Banner de ${restaurant.name}`}
             className="aspect-[5/1] w-full bg-slate-100 object-cover"
           />

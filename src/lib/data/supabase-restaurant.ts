@@ -10,6 +10,7 @@ type RestaurantRow = {
   slug: string;
   logo_url: string | null;
   cover_url?: string | null;
+  banner_url?: string | null;
   address: string;
   opening_hours: string;
   delivery_fee: number | string;
@@ -94,6 +95,7 @@ function mapRestaurant(row: RestaurantRow, businessHours?: BusinessHourRow[] | n
     slug: row.slug,
     logoUrl: row.logo_url ?? undefined,
     coverUrl: row.cover_url ?? undefined,
+    bannerUrl: row.banner_url ?? undefined,
     address: row.address,
     openingHours: row.opening_hours || formatScheduleSummary(weeklySchedule),
     weeklySchedule,
@@ -120,7 +122,7 @@ export async function getPublicRestaurantBySlug(slug: string) {
   if (!isSupabaseConfigured()) return null;
 
   const supabase = createSupabaseBrowserClient();
-  const query = "id, name, slug, logo_url, cover_url, address, opening_hours, delivery_fee, average_prep_time, is_open, whatsapp";
+  const query = "id, name, slug, logo_url, cover_url, banner_url, address, opening_hours, delivery_fee, average_prep_time, is_open, whatsapp";
   const { data, error } = await supabase
     .from("restaurants")
     .select(query)
@@ -169,7 +171,7 @@ export async function getAdminRestaurant() {
 
   const { data: restaurantRow, error: restaurantError } = await supabase
     .from("restaurants")
-    .select("id, name, slug, logo_url, cover_url, address, opening_hours, delivery_fee, average_prep_time, is_open, whatsapp")
+    .select("id, name, slug, logo_url, cover_url, banner_url, address, opening_hours, delivery_fee, average_prep_time, is_open, whatsapp")
     .eq("id", restaurantId)
     .single();
 
@@ -206,4 +208,22 @@ export async function saveRestaurantToSupabase(restaurant: Restaurant) {
   if (!savedRestaurantRow) throw new Error("Nenhum restaurante foi atualizado no Supabase.");
   const businessHours = await getBusinessHours((savedRestaurantRow as RestaurantRow).id);
   return mapRestaurant(savedRestaurantRow as RestaurantRow, businessHours);
+}
+
+export async function saveRestaurantBannerUrl(restaurantId: string, bannerUrl?: string) {
+  if (!isSupabaseConfigured()) return;
+
+  const supabase = createSupabaseBrowserClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("Usuario nao autenticado.");
+
+  const { data, error } = await supabase
+    .from("restaurants")
+    .update({ banner_url: bannerUrl ?? null })
+    .eq("id", restaurantId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("Restaurante nao encontrado ou sem permissao para alteracao.");
 }

@@ -6,6 +6,7 @@ export const restaurant: Restaurant = {
   slug: "delicious-gourmet-bolos-e-salgados",
   logoUrl: "https://staginganotaai.s3.us-west-2.amazonaws.com/produtos/67f91d0803bf3b0019f3ef8f1754600955397blob",
   coverUrl: "https://client-assets.anota.ai/menu-header/4d081712-4a2a-4d9c-b1a2-8ba8ab0c80a0",
+  bannerUrl: "/banner.png",
   address: "R. Aparecida, 1341 - Santa Rosalia, Sorocaba - SP",
   openingHours: "Dom: 09h as 11h30 | Ter a Sex: 09h30 as 17h30 | Sab: 09h as 17h",
   weeklySchedule: [

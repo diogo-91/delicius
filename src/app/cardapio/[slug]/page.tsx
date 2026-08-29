@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   }
 };
 
-export default function PublicMenuPage() {
-  return <PublicMenu />;
+export default async function PublicMenuPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <PublicMenu slug={slug} />;
 }
