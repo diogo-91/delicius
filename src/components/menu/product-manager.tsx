@@ -63,7 +63,12 @@ export function ProductManager() {
       sortOrder: categories.length + 1,
       active: true
     };
-    const next = saveCategory(category);
+    // Parte das categorias/produtos vive apenas no snapshot do Supabase e nunca
+    // e escrita no localStorage. Por isso a nova categoria precisa ser mesclada
+    // no estado atual (que veio do snapshot) e nao no retorno de saveCategory,
+    // que reidrata a partir do seed e apagaria as categorias reais.
+    const next = [...categories, category];
+    saveCategory(category);
     setCategories(next);
     setForm((current) => ({ ...current, categoryId: category.id }));
     setNewCategoryName("");

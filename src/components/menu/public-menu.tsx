@@ -491,21 +491,51 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     return () => data.subscription.unsubscribe();
   }, [supabaseConfigured]);
 
+  // Recuperacao automatica: se o snapshot ficou com produtos apontando para
+  // categorias que nao existem mais (ex.: categorias re-seedadas no painel),
+  // os itens orfaos sao agrupados numa categoria de fallback para nao sumirem
+  // do cardapio publico.
+  const orphanCategoryId = "cat_sem_categoria";
+  const knownCategoryIds = useMemo(() => new Set(categories.map((category) => category.id)), [categories]);
+  const hasOrphanProducts = useMemo(
+    () => products.some((product) => product.active && !knownCategoryIds.has(product.categoryId)),
+    [products, knownCategoryIds]
+  );
+  const displayCategories = useMemo(
+    () =>
+      hasOrphanProducts
+        ? [
+            ...categories,
+            { id: orphanCategoryId, restaurantId: restaurant.id, name: "Mais itens do cardápio", sortOrder: 999, active: true }
+          ]
+        : categories,
+    [categories, hasOrphanProducts, restaurant.id]
+  );
+  const displayProducts = useMemo(
+    () =>
+      hasOrphanProducts
+        ? products.map((product) =>
+            !knownCategoryIds.has(product.categoryId) ? { ...product, categoryId: orphanCategoryId } : product
+          )
+        : products,
+    [products, hasOrphanProducts, knownCategoryIds]
+  );
+
   const filteredProducts = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    return products.filter((product) => {
+    return displayProducts.filter((product) => {
       const matchesCategory = activeCategory === "all" || product.categoryId === activeCategory;
       const matchesSearch = !normalizedQuery || product.name.toLowerCase().includes(normalizedQuery);
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, products, searchQuery]);
+  }, [activeCategory, displayProducts, searchQuery]);
 
   const categoriesWithProducts = useMemo(
-    () => categories.filter((category) => products.some((product) => product.categoryId === category.id)),
-    [categories, products]
+    () => displayCategories.filter((category) => displayProducts.some((product) => product.categoryId === category.id)),
+    [displayCategories, displayProducts]
   );
 
-  const highlightProducts = useMemo(() => getHighlightProducts(categories, products, [], 10), [categories, products]);
+  const highlightProducts = useMemo(() => getHighlightProducts(displayCategories, displayProducts, [], 10), [displayCategories, displayProducts]);
   const highlightsLoop = useMemo(() => [...highlightProducts, ...highlightProducts], [highlightProducts]);
 
   useEffect(() => {
@@ -537,20 +567,20 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     return () => window.clearInterval(interval);
   }, [highlightProducts.length]);
   const crossSellProducts = useMemo(
-    () => getCrossSellProducts(categories, products, cart.map((item) => item.productId)),
-    [categories, products, cart]
+    () => getCrossSellProducts(displayCategories, displayProducts, cart.map((item) => item.productId)),
+    [displayCategories, displayProducts, cart]
   );
 
   const visibleCategories = useMemo(
     () =>
-      categories
+      displayCategories
         .filter((category) => activeCategory === "all" || category.id === activeCategory)
         .map((category) => ({
           ...category,
           products: filteredProducts.filter((product) => product.categoryId === category.id)
         }))
         .filter((category) => category.products.length > 0),
-    [activeCategory, categories, filteredProducts]
+    [activeCategory, displayCategories, filteredProducts]
   );
 
   const subtotal = useMemo(
@@ -1719,7 +1749,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       </div>
 
       <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pb-8 xl:w-[80%]">
-        <SocialProof reviews={placeholderReviews} products={products} excludeIds={highlightProducts.map((product) => product.id)} />
+        <SocialProof reviews={placeholderReviews} products={displayProducts} excludeIds={highlightProducts.map((product) => product.id)} />
 
         {crossSellProducts.length > 0 && (
           <div className="rounded-2xl border border-line2 bg-paper p-5">
