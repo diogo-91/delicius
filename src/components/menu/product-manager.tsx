@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Pencil, Plus, RotateCcw, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ImagePlus, Pencil, Plus, RotateCcw, ToggleLeft, ToggleRight, Trash2, X } from "lucide-react";
 import { deleteProduct, getCategories, getProducts, saveCategories, saveCategory, saveProduct } from "@/lib/data/mock-store";
 import { getMenuSnapshot, saveMenuSnapshot } from "@/lib/data/supabase-menu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -35,6 +35,8 @@ export function ProductManager() {
   const [uploadMessage, setUploadMessage] = useState("");
   const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -77,17 +79,50 @@ export function ProductManager() {
     });
   }
 
+  function persistCategories(next: Category[], failureMessage: string) {
+    setCategories(next);
+    saveCategories(next);
+    saveMenuSnapshot(restaurantSlug, next, items).catch((error) => {
+      setUploadMessage(error instanceof Error ? `${failureMessage}: ${error.message}` : failureMessage);
+    });
+  }
+
   function moveCategory(index: number, direction: -1 | 1) {
     const target = index + direction;
     if (target < 0 || target >= categories.length) return;
     const reordered = [...categories];
     [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
     const normalized = reordered.map((category, position) => ({ ...category, sortOrder: position + 1 }));
-    setCategories(normalized);
-    saveCategories(normalized);
-    saveMenuSnapshot(restaurantSlug, normalized, items).catch((error) => {
-      setUploadMessage(error instanceof Error ? `Ordem alterada localmente, mas nao publicada: ${error.message}` : "Ordem alterada localmente, mas nao publicada.");
-    });
+    persistCategories(normalized, "Ordem alterada localmente, mas nao publicada");
+  }
+
+  function startRenameCategory(category: Category) {
+    setEditingCategoryId(category.id);
+    setEditingCategoryName(category.name);
+  }
+
+  function saveRenameCategory() {
+    const name = editingCategoryName.trim();
+    if (!editingCategoryId || !name) return;
+    const next = categories.map((category) => (category.id === editingCategoryId ? { ...category, name } : category));
+    setEditingCategoryId(null);
+    setEditingCategoryName("");
+    persistCategories(next, "Nome alterado localmente, mas nao publicado");
+  }
+
+  function deleteCategory(category: Category) {
+    const productCount = items.filter((item) => item.categoryId === category.id).length;
+    if (productCount > 0) {
+      setUploadMessage(`Nao e possivel excluir "${category.name}": mova ou exclua os ${productCount} produto(s) desta categoria antes.`);
+      return;
+    }
+    if (!window.confirm(`Excluir a categoria "${category.name}"?`)) return;
+    const next = categories
+      .filter((current) => current.id !== category.id)
+      .map((current, position) => ({ ...current, sortOrder: position + 1 }));
+    if (form.categoryId === category.id) setForm((current) => ({ ...current, categoryId: next[0]?.id ?? "" }));
+    if (editingCategoryId === category.id) setEditingCategoryId(null);
+    persistCategories(next, "Categoria excluida localmente, mas nao publicada");
   }
 
   function resetForm() {
@@ -297,34 +332,96 @@ export function ProductManager() {
                 Categoria
               </AdminButton>
             </div>
-            {categories.length > 1 && (
+            {categories.length > 0 && (
               <div className="rounded-xl border border-[#E5E7EB]/50 bg-slate-50/50 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">Ordem das categorias no cardápio</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">Categorias do cardápio</p>
+                <p className="mt-0.5 text-[10px] leading-normal text-[#6B7280]">Use as setas para ordenar. O lápis renomeia e a lixeira exclui (só categorias sem produtos).</p>
                 <ul className="mt-2 space-y-1.5">
-                  {categories.map((category, index) => (
-                    <li key={category.id} className="flex items-center gap-2 rounded-lg border border-[#E5E7EB]/60 bg-white px-2.5 py-1.5">
-                      <span className="w-4 shrink-0 text-[11px] font-semibold text-[#6B7280]">{index + 1}</span>
-                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#111827]">{category.name}</span>
-                      <button
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50 disabled:opacity-30"
-                        disabled={index === 0}
-                        onClick={() => moveCategory(index, -1)}
-                        aria-label={`Mover ${category.name} para cima`}
-                        type="button"
-                      >
-                        <ArrowUp className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50 disabled:opacity-30"
-                        disabled={index === categories.length - 1}
-                        onClick={() => moveCategory(index, 1)}
-                        aria-label={`Mover ${category.name} para baixo`}
-                        type="button"
-                      >
-                        <ArrowDown className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
+                  {categories.map((category, index) => {
+                    const productCount = items.filter((item) => item.categoryId === category.id).length;
+                    return (
+                      <li key={category.id} className="flex items-center gap-1.5 rounded-lg border border-[#E5E7EB]/60 bg-white px-2 py-1.5">
+                        <span className="w-4 shrink-0 text-center text-[11px] font-semibold text-[#6B7280]">{index + 1}</span>
+                        {editingCategoryId === category.id ? (
+                          <>
+                            <AdminInput
+                              autoFocus
+                              className="h-7 flex-1 text-xs"
+                              value={editingCategoryName}
+                              onChange={(event) => setEditingCategoryName(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  saveRenameCategory();
+                                }
+                                if (event.key === "Escape") setEditingCategoryId(null);
+                              }}
+                            />
+                            <button
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-green-600 transition hover:bg-slate-50 disabled:opacity-30"
+                              disabled={!editingCategoryName.trim()}
+                              onClick={saveRenameCategory}
+                              aria-label="Salvar nome"
+                              type="button"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50"
+                              onClick={() => setEditingCategoryId(null)}
+                              aria-label="Cancelar"
+                              type="button"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#111827]">
+                              {category.name}
+                              {productCount > 0 && <span className="ml-1 text-[10px] font-normal text-[#6B7280]">({productCount})</span>}
+                            </span>
+                            <button
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50 disabled:opacity-30"
+                              disabled={index === 0}
+                              onClick={() => moveCategory(index, -1)}
+                              aria-label={`Mover ${category.name} para cima`}
+                              type="button"
+                            >
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50 disabled:opacity-30"
+                              disabled={index === categories.length - 1}
+                              onClick={() => moveCategory(index, 1)}
+                              aria-label={`Mover ${category.name} para baixo`}
+                              type="button"
+                            >
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50"
+                              onClick={() => startRenameCategory(category)}
+                              aria-label={`Renomear ${category.name}`}
+                              type="button"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            <button
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-red-500 transition hover:bg-red-50 disabled:opacity-30"
+                              disabled={productCount > 0}
+                              title={productCount > 0 ? "Mova ou exclua os produtos desta categoria antes" : undefined}
+                              onClick={() => deleteCategory(category)}
+                              aria-label={`Excluir ${category.name}`}
+                              type="button"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
