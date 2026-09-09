@@ -54,6 +54,11 @@ export function saveCategory(category: Category) {
   return next;
 }
 
+export function saveCategories(list: Category[]) {
+  write(CATEGORIES_KEY, list);
+  return list;
+}
+
 export function getProducts() {
   return read<Product[]>(PRODUCTS_KEY, products).map((product) => ({
     ...product,

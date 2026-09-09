@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ImagePlus, Pencil, Plus, RotateCcw, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
-import { deleteProduct, getCategories, getProducts, saveCategory, saveProduct } from "@/lib/data/mock-store";
+import { ArrowDown, ArrowUp, ImagePlus, Pencil, Plus, RotateCcw, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
+import { deleteProduct, getCategories, getProducts, saveCategories, saveCategory, saveProduct } from "@/lib/data/mock-store";
 import { getMenuSnapshot, saveMenuSnapshot } from "@/lib/data/supabase-menu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -74,6 +74,19 @@ export function ProductManager() {
     setNewCategoryName("");
     saveMenuSnapshot(restaurantSlug, next, items).catch((error) => {
       setUploadMessage(error instanceof Error ? `Categoria criada localmente, mas nao publicada: ${error.message}` : "Categoria criada localmente, mas nao publicada.");
+    });
+  }
+
+  function moveCategory(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= categories.length) return;
+    const reordered = [...categories];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    const normalized = reordered.map((category, position) => ({ ...category, sortOrder: position + 1 }));
+    setCategories(normalized);
+    saveCategories(normalized);
+    saveMenuSnapshot(restaurantSlug, normalized, items).catch((error) => {
+      setUploadMessage(error instanceof Error ? `Ordem alterada localmente, mas nao publicada: ${error.message}` : "Ordem alterada localmente, mas nao publicada.");
     });
   }
 
@@ -284,6 +297,37 @@ export function ProductManager() {
                 Categoria
               </AdminButton>
             </div>
+            {categories.length > 1 && (
+              <div className="rounded-xl border border-[#E5E7EB]/50 bg-slate-50/50 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">Ordem das categorias no cardápio</p>
+                <ul className="mt-2 space-y-1.5">
+                  {categories.map((category, index) => (
+                    <li key={category.id} className="flex items-center gap-2 rounded-lg border border-[#E5E7EB]/60 bg-white px-2.5 py-1.5">
+                      <span className="w-4 shrink-0 text-[11px] font-semibold text-[#6B7280]">{index + 1}</span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#111827]">{category.name}</span>
+                      <button
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50 disabled:opacity-30"
+                        disabled={index === 0}
+                        onClick={() => moveCategory(index, -1)}
+                        aria-label={`Mover ${category.name} para cima`}
+                        type="button"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] transition hover:bg-slate-50 disabled:opacity-30"
+                        disabled={index === categories.length - 1}
+                        onClick={() => moveCategory(index, 1)}
+                        aria-label={`Mover ${category.name} para baixo`}
+                        type="button"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="rounded-xl border border-[#E5E7EB]/50 bg-slate-50/50 p-4">
               <div className="aspect-square w-full overflow-hidden rounded-lg bg-white border border-[#E5E7EB]/60">
                 <img src={previewObjectUrl ?? form.imageUrl} alt="Preview do produto" width={1080} height={1080} className="h-full w-full object-cover" />
