@@ -28,6 +28,13 @@ const config: Config = {
           hover: "#8F1D2C",
           pressed: "#7A2E1C"
         },
+        success: {
+          50: "#f0fdf4",
+          100: "#dcfce7",
+          500: "#16a34a",
+          600: "#15803d",
+          700: "#166534"
+        },
         gold: "#D4A72C",
         paper: "#FFF8EF",
         ink2: "#3A1F16",

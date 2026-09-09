@@ -1004,7 +1004,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             <button
               key={slot.iso}
               className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
-                selectedSlot?.iso === slot.iso ? "border-cta bg-cta text-white" : "border-line2 bg-white text-ink2 hover:border-cta"
+                selectedSlot?.iso === slot.iso ? "border-success-600 bg-success-500 text-white" : "border-line2 bg-white text-ink2 hover:border-success-500"
               }`}
               onClick={() => setSelectedSlot(slot)}
               type="button"
@@ -1037,7 +1037,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         >
           Voltar
         </Button>
-        <Button variant="cta" className="h-11 rounded-xl" disabled={!selectedSlot} onClick={confirmScheduling} type="button">
+        <Button variant="success" className="h-11 rounded-xl" disabled={!selectedSlot} onClick={confirmScheduling} type="button">
           CONFIRMAR • {formatCurrency(total)}
         </Button>
       </div>
@@ -1119,7 +1119,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               Agora não
             </Button>
             <Button
-              variant="cta"
+              variant="success"
               className="h-10 rounded-lg text-xs"
               onClick={() => {
                 setGuestSavePromptDismissed(true);
@@ -1190,7 +1190,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
                     </div>
                   </div>
                   <button
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cta text-white disabled:opacity-40"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-500 text-white disabled:opacity-40"
                     disabled={getAvailableStock(product) <= 0}
                     onClick={() => incrementProduct(product)}
                     type="button"
@@ -1217,7 +1217,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               <button
                 key={option.value}
                 className={`h-11 rounded-xl border px-3 text-sm font-semibold transition ${
-                  type === option.value ? "border-brand-600 bg-brand-600 text-white shadow-soft" : "border-line bg-white text-ink hover:border-brand-500"
+                  type === option.value ? "border-success-600 bg-success-500 text-white shadow-soft" : "border-line bg-white text-ink hover:border-success-500"
                 }`}
                 onClick={() => {
                   setType(option.value as OrderType);
@@ -1236,7 +1236,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereco de entrega</p>
             <button
               className={`w-full rounded-xl border p-3 text-left transition ${
-                addressMode === "saved" ? "border-brand-500 bg-brand-50 text-ink" : "border-line bg-white text-muted hover:border-brand-500"
+                addressMode === "saved" ? "border-success-600 bg-success-50 text-ink" : "border-line bg-white text-muted hover:border-success-500"
               }`}
               onClick={() => setAddressMode("saved")}
               type="button"
@@ -1246,7 +1246,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             </button>
             <button
               className={`h-10 w-full rounded-xl border text-sm font-semibold transition ${
-                addressMode === "other" ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-white text-ink hover:border-brand-500"
+                addressMode === "other" ? "border-success-600 bg-success-500 text-white" : "border-line bg-white text-ink hover:border-success-500"
               }`}
               onClick={() => setAddressMode("other")}
               type="button"
@@ -1296,7 +1296,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               <button
                 key={option.value}
                 className={`h-10 rounded-xl border px-3 text-sm font-semibold transition ${
-                  option.disabled ? "cursor-not-allowed border-line bg-slate-100 text-muted opacity-60" : paymentMethod === option.value ? "border-brand-600 bg-brand-500 text-white shadow-soft" : "border-line bg-white text-ink hover:border-brand-500"
+                  option.disabled ? "cursor-not-allowed border-line bg-slate-100 text-muted opacity-60" : paymentMethod === option.value ? "border-success-600 bg-success-500 text-white shadow-soft" : "border-line bg-white text-ink hover:border-success-500"
                 }`}
                 onClick={() => !option.disabled && selectPaymentMethod(option.value as PaymentMethod)}
                 disabled={option.disabled}
@@ -1380,12 +1380,12 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         </div>
 
         {storeAcceptingOrders ? (
-          <Button variant="cta" className="h-12 w-full rounded-xl" disabled={cart.length === 0 || paymentStatus === "processing" || paymentStatus === "pending"} onClick={finishOrder} type="button">
+          <Button variant="success" className="h-12 w-full rounded-xl" disabled={cart.length === 0 || paymentStatus === "processing" || paymentStatus === "pending"} onClick={finishOrder} type="button">
             {paymentStatus === "processing" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
             {paymentStatus === "pending" ? "AGUARDANDO PAGAMENTO" : `PAGAR • ${formatCurrency(total)}`}
           </Button>
         ) : (
-          <Button variant="cta" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={() => setSlotPickerOpen(true)} type="button">
+          <Button variant="success" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={() => setSlotPickerOpen(true)} type="button">
             AGENDAR PEDIDO
           </Button>
         )}
