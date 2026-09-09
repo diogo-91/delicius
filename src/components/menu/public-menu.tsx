@@ -289,10 +289,6 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     addressNumber: ""
   });
 
-  useEffect(() => {
-    if (user?.email) setPayerForm((current) => ({ ...current, email: current.email || user.email || "" }));
-  }, [user?.email]);
-
   // Resume a payment that was still pending when the tab was closed/refreshed,
   // so the customer still sees the confirmation (and the backend gets polled).
   useEffect(() => {
