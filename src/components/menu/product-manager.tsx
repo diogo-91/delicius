@@ -336,7 +336,7 @@ export function ProductManager() {
               <div className="rounded-xl border border-[#E5E7EB]/50 bg-slate-50/50 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">Categorias do cardápio</p>
                 <p className="mt-0.5 text-[10px] leading-normal text-[#6B7280]">Use as setas para ordenar. O lápis renomeia e a lixeira exclui (só categorias sem produtos).</p>
-                <ul className="mt-2 space-y-1.5">
+                <ul className="scrollbar-clean mt-2 max-h-[260px] space-y-1.5 overflow-y-auto pr-1">
                   {categories.map((category, index) => {
                     const productCount = items.filter((item) => item.categoryId === category.id).length;
                     return (
