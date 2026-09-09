@@ -25,6 +25,7 @@ export type Restaurant = {
   logoUrl?: string;
   coverUrl?: string;
   bannerUrl?: string;
+  bannerLinkProductId?: string;
   address: string;
   openingHours: string;
   weeklySchedule?: WeekdaySchedule[];

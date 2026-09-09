@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Clock, ImagePlus, Pencil, Save, Trash2 } from "lucide-react";
-import { getRestaurant, saveRestaurant } from "@/lib/data/mock-store";
-import { defaultWeeklySchedule, formatScheduleSummary, getAdminRestaurant, isSupabaseConfigured, saveRestaurantBannerUrl, saveRestaurantToSupabase } from "@/lib/data/supabase-restaurant";
+import { getProducts, getRestaurant, saveRestaurant } from "@/lib/data/mock-store";
+import { getMenuSnapshot } from "@/lib/data/supabase-menu";
+import { defaultWeeklySchedule, formatScheduleSummary, getAdminRestaurant, isSupabaseConfigured, saveRestaurantBannerLinkProductId, saveRestaurantBannerUrl, saveRestaurantToSupabase } from "@/lib/data/supabase-restaurant";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
-import type { Restaurant, WeekdaySchedule } from "@/types/domain";
+import type { Product, Restaurant, WeekdaySchedule } from "@/types/domain";
 import { AdminBadge } from "@/components/admin/ui/badge";
 import { AdminButton } from "@/components/admin/ui/button";
 import { AdminInput } from "@/components/admin/ui/input";
@@ -29,6 +30,8 @@ export default function CompanyPage() {
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
   const [heroSaving, setHeroSaving] = useState(false);
   const [heroMessage, setHeroMessage] = useState("");
+  const [bannerProducts, setBannerProducts] = useState<Product[]>([]);
+  const [bannerLinkSaving, setBannerLinkSaving] = useState(false);
 
   const schedule = form.weeklySchedule ?? defaultWeeklySchedule;
 
@@ -62,6 +65,38 @@ export default function CompanyPage() {
       if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
     };
   }, [heroPreviewUrl]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadProducts() {
+      const snapshot = form.slug ? await getMenuSnapshot(form.slug).catch(() => null) : null;
+      const list = snapshot?.products?.length ? snapshot.products : getProducts();
+      if (!ignore) setBannerProducts(list.filter((product) => product.active !== false));
+    }
+
+    loadProducts();
+    return () => {
+      ignore = true;
+    };
+  }, [form.slug]);
+
+  async function handleBannerLink(productId: string) {
+    const nextId = productId || undefined;
+    setBannerLinkSaving(true);
+    setHeroMessage(nextId ? "Vinculando o banner ao produto..." : "Removendo o vinculo do banner...");
+    try {
+      await saveRestaurantBannerLinkProductId(form.id, nextId);
+      const nextRestaurant = { ...form, bannerLinkProductId: nextId };
+      saveRestaurant(nextRestaurant);
+      setForm(nextRestaurant);
+      setHeroMessage(nextId ? "Banner vinculado. Ao tocar nele, o cliente vai direto para esse produto." : "Vinculo removido. O banner volta a ser apenas uma imagem.");
+    } catch (error) {
+      setHeroMessage(error instanceof Error ? `Falha ao salvar o vinculo: ${error.message}` : "Falha ao salvar o vinculo do banner.");
+    } finally {
+      setBannerLinkSaving(false);
+    }
+  }
 
   function updateSchedule(day: number, patch: Partial<WeekdaySchedule>) {
     setForm((current) => ({
@@ -106,7 +141,8 @@ export default function CompanyPage() {
     setHeroMessage("Removendo imagem do cardápio...");
     try {
       await saveRestaurantBannerUrl(form.id, undefined);
-      const nextRestaurant = { ...form, bannerUrl: undefined };
+      if (form.bannerLinkProductId) await saveRestaurantBannerLinkProductId(form.id, undefined);
+      const nextRestaurant = { ...form, bannerUrl: undefined, bannerLinkProductId: undefined };
       saveRestaurant(nextRestaurant);
       setForm(nextRestaurant);
       setHeroPreviewUrl(null);
@@ -238,6 +274,34 @@ export default function CompanyPage() {
                   </AdminButton>
                 )}
               </div>
+
+              {form.bannerUrl && (
+                <div className="mt-4 border-t border-slate-200 pt-4">
+                  <label htmlFor="banner-link-product" className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Pencil className="h-4 w-4 text-brand-600" />
+                    Ao tocar no banner, abrir o produto
+                  </label>
+                  <p className="mt-1 text-xs text-slate-500">Opcional. Quando definido, o banner do cardápio vira um atalho que leva o cliente direto para esse produto.</p>
+                  <select
+                    id="banner-link-product"
+                    className="mt-3 h-10 w-full rounded-control border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm transition focus:border-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    value={form.bannerLinkProductId ?? ""}
+                    disabled={bannerLinkSaving || heroSaving}
+                    onChange={(event) => handleBannerLink(event.target.value)}
+                  >
+                    <option value="">Nenhum (apenas imagem)</option>
+                    {bannerProducts.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                    {form.bannerLinkProductId && !bannerProducts.some((product) => product.id === form.bannerLinkProductId) && (
+                      <option value={form.bannerLinkProductId}>Produto vinculado (indisponível na lista atual)</option>
+                    )}
+                  </select>
+                </div>
+              )}
+
               {heroMessage && <p className="mt-3 text-xs font-medium text-brand-700">{heroMessage}</p>}
             </div>
 

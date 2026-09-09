@@ -11,6 +11,7 @@ type RestaurantRow = {
   logo_url: string | null;
   cover_url?: string | null;
   banner_url?: string | null;
+  banner_link_product_id?: string | null;
   address: string;
   opening_hours: string;
   delivery_fee: number | string;
@@ -96,6 +97,7 @@ function mapRestaurant(row: RestaurantRow, businessHours?: BusinessHourRow[] | n
     logoUrl: row.logo_url ?? undefined,
     coverUrl: row.cover_url ?? undefined,
     bannerUrl: row.banner_url ?? undefined,
+    bannerLinkProductId: row.banner_link_product_id ?? undefined,
     address: row.address,
     openingHours: row.opening_hours || formatScheduleSummary(weeklySchedule),
     weeklySchedule,
@@ -118,6 +120,30 @@ async function getBusinessHours(restaurantId: string) {
   return data as BusinessHourRow[];
 }
 
+// Fetched on its own and error-tolerant so a database that has not run
+// migration 014 yet still loads the restaurant normally (just without the link).
+// Once the column is confirmed missing we stop asking, to avoid console noise.
+let bannerLinkColumnAvailable = true;
+
+async function getBannerLinkProductId(restaurantId: string): Promise<string | undefined> {
+  if (!bannerLinkColumnAvailable) return undefined;
+  try {
+    const supabase = createSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("banner_link_product_id")
+      .eq("id", restaurantId)
+      .maybeSingle();
+    if (error) {
+      if (error.code === "42703") bannerLinkColumnAvailable = false;
+      return undefined;
+    }
+    return (data as { banner_link_product_id?: string | null } | null)?.banner_link_product_id ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function getPublicRestaurantBySlug(slug: string) {
   if (!isSupabaseConfigured()) return null;
 
@@ -130,7 +156,7 @@ export async function getPublicRestaurantBySlug(slug: string) {
     .maybeSingle();
 
   if (error) return null;
-  const restaurantRow = data;
+  let restaurantRow = data;
 
   if (!restaurantRow) {
     const { data: fallback } = await supabase
@@ -141,12 +167,14 @@ export async function getPublicRestaurantBySlug(slug: string) {
       .maybeSingle();
 
     if (!fallback) return null;
-    const businessHours = await getBusinessHours(fallback.id);
-    return mapRestaurant(fallback as RestaurantRow, businessHours);
+    restaurantRow = fallback;
   }
 
-  const businessHours = await getBusinessHours(restaurantRow.id);
-  return mapRestaurant(restaurantRow as RestaurantRow, businessHours);
+  const [businessHours, bannerLinkProductId] = await Promise.all([
+    getBusinessHours(restaurantRow.id),
+    getBannerLinkProductId(restaurantRow.id)
+  ]);
+  return { ...mapRestaurant(restaurantRow as RestaurantRow, businessHours), bannerLinkProductId };
 }
 
 export async function getAdminRestaurant() {
@@ -176,8 +204,11 @@ export async function getAdminRestaurant() {
     .single();
 
   if (restaurantError || !restaurantRow) return null;
-  const businessHours = await getBusinessHours(restaurantId);
-  return mapRestaurant(restaurantRow as RestaurantRow, businessHours);
+  const [businessHours, bannerLinkProductId] = await Promise.all([
+    getBusinessHours(restaurantId),
+    getBannerLinkProductId(restaurantId)
+  ]);
+  return { ...mapRestaurant(restaurantRow as RestaurantRow, businessHours), bannerLinkProductId };
 }
 
 export async function saveRestaurantToSupabase(restaurant: Restaurant) {
@@ -220,6 +251,24 @@ export async function saveRestaurantBannerUrl(restaurantId: string, bannerUrl?: 
   const { data, error } = await supabase
     .from("restaurants")
     .update({ banner_url: bannerUrl ?? null })
+    .eq("id", restaurantId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("Restaurante nao encontrado ou sem permissao para alteracao.");
+}
+
+export async function saveRestaurantBannerLinkProductId(restaurantId: string, productId?: string) {
+  if (!isSupabaseConfigured()) return;
+
+  const supabase = createSupabaseBrowserClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("Usuario nao autenticado.");
+
+  const { data, error } = await supabase
+    .from("restaurants")
+    .update({ banner_link_product_id: productId ?? null })
     .eq("id", restaurantId)
     .select("id")
     .maybeSingle();

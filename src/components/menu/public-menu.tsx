@@ -233,6 +233,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   const [menuLoading, setMenuLoading] = useState(supabaseConfigured);
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
+  const [bannerScrollNonce, setBannerScrollNonce] = useState(0);
   const [cart, setCart] = useState<CartItem[]>(readSavedCart);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(readSavedFavorites);
   const [coupons, setCoupons] = useState<Coupon[]>(getCoupons());
@@ -534,6 +536,29 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     () => displayCategories.filter((category) => displayProducts.some((product) => product.categoryId === category.id)),
     [displayCategories, displayProducts]
   );
+
+  const bannerLinkProduct = useMemo(
+    () => (restaurant.bannerLinkProductId ? displayProducts.find((product) => product.id === restaurant.bannerLinkProductId && product.active !== false) ?? null : null),
+    [restaurant.bannerLinkProductId, displayProducts]
+  );
+
+  function openBannerProduct() {
+    if (!bannerLinkProduct) return;
+    setSearchQuery("");
+    const hasCategoryTab = categoriesWithProducts.some((category) => category.id === bannerLinkProduct.categoryId);
+    setActiveCategory(hasCategoryTab ? bannerLinkProduct.categoryId : "all");
+    setHighlightedProductId(bannerLinkProduct.id);
+    setBannerScrollNonce((value) => value + 1);
+  }
+
+  useEffect(() => {
+    if (!highlightedProductId || bannerScrollNonce === 0) return;
+    const target = document.getElementById(`product-${highlightedProductId}`);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timeout = window.setTimeout(() => setHighlightedProductId(null), 2600);
+    return () => window.clearTimeout(timeout);
+    // activeCategory is a dependency so the scroll retries once the new category grid renders
+  }, [highlightedProductId, bannerScrollNonce, activeCategory]);
 
   const highlightProducts = useMemo(() => getHighlightProducts(displayCategories, displayProducts, [], 10), [displayCategories, displayProducts]);
   const highlightsLoop = useMemo(() => [...highlightProducts, ...highlightProducts], [highlightProducts]);
@@ -1507,11 +1532,26 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
       {restaurant.bannerUrl && (
         <section className="w-full">
-          <img
-            src={restaurant.bannerUrl}
-            alt={`Banner de ${restaurant.name}`}
-            className="aspect-[5/1] w-full bg-slate-100 object-cover"
-          />
+          {bannerLinkProduct ? (
+            <button
+              type="button"
+              onClick={openBannerProduct}
+              aria-label={`Ver o produto ${bannerLinkProduct.name}`}
+              className="block w-full transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cta"
+            >
+              <img
+                src={restaurant.bannerUrl}
+                alt={`Banner de ${restaurant.name} — toque para ver ${bannerLinkProduct.name}`}
+                className="aspect-[5/1] w-full bg-slate-100 object-cover"
+              />
+            </button>
+          ) : (
+            <img
+              src={restaurant.bannerUrl}
+              alt={`Banner de ${restaurant.name}`}
+              className="aspect-[5/1] w-full bg-slate-100 object-cover"
+            />
+          )}
         </section>
       )}
 
@@ -1668,7 +1708,10 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
                   {category.products.map((product, index) => (
                     <article
                       key={product.id}
-                      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line2 bg-white shadow-sm transition duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-lg"
+                      id={`product-${product.id}`}
+                      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 scroll-mt-[200px] motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-lg ${
+                        highlightedProductId === product.id ? "border-cta ring-2 ring-cta ring-offset-2" : "border-line2"
+                      }`}
                     >
                       <div className="relative aspect-square w-full overflow-hidden bg-paper">
                         <img
