@@ -43,6 +43,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="flex min-h-[510px] items-center p-6 sm:p-8 lg:p-10">
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6">
+              <img src="/delicious-logo.png" alt="Delicious Gourmet" className="mb-5 h-12 w-auto object-contain" />
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#9A5A3C]">Painel administrativo</span>
               <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-[#3A1F16]">Bem-vindo de volta</h1>
               <p className="mt-2 text-sm leading-6 text-[#75645D]">Entre com seus dados para gerenciar sua operação.</p>

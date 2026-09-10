@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChefHat, Clock, Copy, CreditCard, Crown, Flame, Gift, Heart, ListFilter, LoaderCircle, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { CalendarDays, Check, ChefHat, Clock, Copy, CreditCard, Flame, Gift, Heart, ListFilter, LoaderCircle, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, buildOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -624,11 +624,6 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   const customerIsAuthenticated = Boolean(user || localCustomerSession);
   const customerHistory = customerIsAuthenticated ? ordersSnapshot.slice(0, 3) : [];
   const displayName = useMemo(() => restaurant.name.replace(/\s*BOLOS E SALGADOS\s*/i, "").trim(), [restaurant.name]);
-  const [wordmarkName, wordmarkSubtitle] = useMemo(() => {
-    const [first, ...rest] = displayName.split(/\s+/).filter(Boolean);
-    const titleCased = first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : displayName;
-    return [titleCased, rest.join(" ")];
-  }, [displayName]);
   const openingHours = useMemo(() => getOpeningHoursSummary(restaurant.weeklySchedule ?? defaultWeeklySchedule), [restaurant.weeklySchedule]);
   const openStatus = useMemo(() => getStoreOpenStatus(restaurant, now), [now, restaurant]);
   const storeAcceptingOrders = restaurant.isOpen && openStatus.isOpen;
@@ -1418,13 +1413,11 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
       <header className="sticky top-0 z-30 border-b border-line2 bg-white">
         <div className="mx-auto flex w-full max-w-[1500px] items-center gap-3 px-4 py-3 xl:w-[80%]">
-          <div className="flex shrink-0 flex-col items-center leading-none">
-            <Crown className="h-3.5 w-3.5 text-ink2" strokeWidth={1.5} />
-            <span className="font-display text-xl italic text-ink2 md:text-2xl">{wordmarkName}</span>
-            {wordmarkSubtitle && (
-              <span className="mt-1 border-t border-ink2/50 pt-0.5 text-[9px] font-semibold tracking-[0.35em] text-ink2 md:text-[10px]">{wordmarkSubtitle}</span>
-            )}
-          </div>
+          <img
+            src="/delicious-logo.png"
+            alt={displayName || "Delicious Gourmet"}
+            className="h-10 w-auto shrink-0 object-contain md:h-12"
+          />
 
           <div className="hidden flex-1 md:block">
             <div className="relative mx-auto max-w-xl">
@@ -1855,11 +1848,9 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       <footer className="bg-[#3A1F16] text-white/80">
         <div className="mx-auto grid w-full max-w-[1500px] gap-8 px-4 py-8 xl:w-[80%] sm:grid-cols-3">
           <div>
-            <div className="flex flex-col items-start leading-none">
-              <Crown className="h-3.5 w-3.5 text-white" strokeWidth={1.5} />
-              <span className="font-display text-xl italic text-white">{wordmarkName}</span>
-              {wordmarkSubtitle && <span className="mt-1 border-t border-white/40 pt-0.5 text-[9px] font-semibold tracking-[0.35em] text-white">{wordmarkSubtitle}</span>}
-            </div>
+            <span className="inline-flex rounded-xl bg-white p-2.5">
+              <img src="/delicious-logo.png" alt={displayName || "Delicious Gourmet"} className="h-9 w-auto object-contain" />
+            </span>
             <p className="mt-3 max-w-xs text-xs leading-5 text-white/60">Bolos, doces e salgados artesanais feitos para tornar seus momentos inesquecíveis.</p>
           </div>
           <div>

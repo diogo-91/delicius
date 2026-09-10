@@ -352,7 +352,7 @@ export default function CompanyPage() {
 
         <aside className="h-fit rounded-card border border-slate-200 bg-white p-6 shadow-card">
           <div className="rounded-xl bg-slate-900 p-4">
-            <img src={form.logoUrl ?? "/komanda-logo.png"} alt={form.name} className="h-24 w-24 rounded-lg bg-white object-contain p-2" />
+            <img src="/delicious-logo.png" alt={form.name} className="h-16 w-auto rounded-lg bg-white object-contain p-2" />
           </div>
           <h3 className="mt-4 text-xl font-semibold text-slate-900">{form.name}</h3>
           <p className="mt-2 text-sm text-slate-500">{form.address}</p>

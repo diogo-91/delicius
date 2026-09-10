@@ -72,10 +72,15 @@ function SidebarNav({ pathname, role, onNavigate, collapsed }: { pathname: strin
 function SidebarBrand({ restaurant, collapsed }: { restaurant: ReturnType<typeof getRestaurant>; collapsed?: boolean }) {
   return (
     <div className={cn("flex min-w-0 items-center", collapsed ? "justify-center" : "gap-2.5")}>
-      <img src={restaurant.logoUrl ?? "/komanda-logo.png"} alt={restaurant.name} className="h-8 w-8 shrink-0 rounded-lg bg-white object-contain p-1 ring-1 ring-white/15" />
+      <span className={cn("flex shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-white/15", collapsed ? "h-9 w-9 p-1" : "h-10 px-2")}>
+        <img
+          src="/delicious-logo.png"
+          alt={restaurant.name}
+          className={cn("object-contain", collapsed ? "h-full w-full" : "h-6 w-auto")}
+        />
+      </span>
       {!collapsed && (
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold leading-tight text-white">Delicius Gourmet</p>
           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#f2c9a3]">
             <Sparkles className="h-2.5 w-2.5" />
             Plano Growth
