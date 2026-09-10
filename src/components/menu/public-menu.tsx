@@ -246,6 +246,11 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   const [type, setType] = useState<OrderType>("delivery");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [addressMode, setAddressMode] = useState<"saved" | "other">("saved");
+  const [deliveryQuote, setDeliveryQuote] = useState<{ status: "idle" | "loading" | "ok" | "unavailable"; fee: number | null; km: number | null }>({
+    status: "idle",
+    fee: null,
+    km: null
+  });
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authMessage, setAuthMessage] = useState("");
@@ -613,7 +618,51 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     [cart]
   );
 
-  const deliveryFee = type === "delivery" ? restaurant.deliveryFee : 0;
+  const deliveryAddress = addressMode === "saved" ? customerProfile : customer;
+
+  useEffect(() => {
+    if (type !== "delivery") {
+      setDeliveryQuote({ status: "idle", fee: null, km: null });
+      return;
+    }
+    const street = deliveryAddress.street.trim();
+    const neighborhood = deliveryAddress.neighborhood.trim();
+    const number = deliveryAddress.number.trim();
+    if (!street || !neighborhood) {
+      setDeliveryQuote({ status: "idle", fee: null, km: null });
+      return;
+    }
+    let cancelled = false;
+    setDeliveryQuote((current) => ({ ...current, status: "loading" }));
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/shipping/estimate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ street, number, neighborhood })
+        });
+        const data = (await response.json()) as { configured?: boolean; available?: boolean; fee?: number; km?: number | null };
+        if (cancelled) return;
+        if (data.configured && data.available && typeof data.fee === "number") {
+          setDeliveryQuote({ status: "ok", fee: data.fee, km: typeof data.km === "number" ? data.km : null });
+        } else if (data.configured) {
+          setDeliveryQuote({ status: "unavailable", fee: null, km: null });
+        } else {
+          // integracao de frete desligada — usa a taxa fixa sem avisar
+          setDeliveryQuote({ status: "idle", fee: null, km: null });
+        }
+      } catch {
+        if (!cancelled) setDeliveryQuote({ status: "unavailable", fee: null, km: null });
+      }
+    }, 700);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [type, addressMode, deliveryAddress.street, deliveryAddress.number, deliveryAddress.neighborhood]);
+
+  const deliveryFee =
+    type === "delivery" ? (deliveryQuote.status === "ok" && deliveryQuote.fee != null ? deliveryQuote.fee : restaurant.deliveryFee) : 0;
   const discount = useMemo(() => {
     if (!appliedCoupon) return 0;
     if (appliedCoupon.type === "percent") return Math.min(subtotal * (appliedCoupon.value / 100), subtotal + deliveryFee);
@@ -745,7 +794,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       paymentMethod,
       items,
       discount,
-      couponCode: appliedCoupon?.code
+      couponCode: appliedCoupon?.code,
+      deliveryFee: type === "delivery" ? deliveryFee : undefined
     });
     setPaymentStatus("processing");
     setPaymentMessage("Conectando ao Asaas...");
@@ -767,6 +817,9 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           order,
           cpfCnpj: payerCpf,
           email: payerEmail,
+          delivery: type === "delivery"
+            ? { street: checkoutCustomer.street, number: checkoutCustomer.number, neighborhood: checkoutCustomer.neighborhood }
+            : undefined,
           card: paymentMethod === "credit_card" ? {
             holderName: cardForm.holder,
             number: cardForm.number,
@@ -1354,10 +1407,26 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             <span>Subtotal</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-sm text-muted">
-            <span>Entrega</span>
-            <span>{formatCurrency(deliveryFee)}</span>
-          </div>
+          {type === "delivery" && (
+            <div className="mt-2 flex items-center justify-between text-sm text-muted">
+              <span>
+                Entrega
+                {deliveryQuote.status === "ok" && deliveryQuote.km != null && (
+                  <span className="ml-1 text-xs text-muted2">≈ {deliveryQuote.km.toFixed(1).replace(".", ",")} km</span>
+                )}
+              </span>
+              <span>
+                {deliveryQuote.status === "loading" ? (
+                  <span className="text-xs">calculando frete...</span>
+                ) : (
+                  formatCurrency(deliveryFee)
+                )}
+              </span>
+            </div>
+          )}
+          {type === "delivery" && deliveryQuote.status === "unavailable" && (
+            <p className="mt-1 text-[11px] text-muted2">Não foi possível calcular o frete agora — usando a taxa padrão.</p>
+          )}
           {discount > 0 && (
             <div className="mt-2 flex items-center justify-between text-sm text-brand-700">
               <span>Desconto {appliedCoupon ? `(${appliedCoupon.code})` : ""}</span>

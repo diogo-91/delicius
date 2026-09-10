@@ -116,6 +116,7 @@ type CreateOrderPayload = {
   items: CartItem[];
   discount?: number;
   couponCode?: string;
+  deliveryFee?: number;
 };
 
 export function buildOrder(payload: CreateOrderPayload) {
@@ -125,7 +126,7 @@ export function buildOrder(payload: CreateOrderPayload) {
     return sum + (item.unitPrice + addonsTotal) * item.quantity;
   }, 0);
   const currentRestaurant = getRestaurant();
-  const deliveryFee = payload.type === "delivery" ? currentRestaurant.deliveryFee : 0;
+  const deliveryFee = payload.type === "delivery" ? (payload.deliveryFee ?? currentRestaurant.deliveryFee) : 0;
   const discount = Math.min(payload.discount ?? 0, subtotal + deliveryFee);
   const customer: Customer = {
     id: `cust_${Date.now()}`,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { asaasRequest, digits } from "@/lib/asaas";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { estimateDelivery, isZlhubConfigured } from "@/lib/zlhub";
 import { coupons } from "@/lib/data/seed";
 import type { Order, Product } from "@/types/domain";
 
@@ -19,12 +20,19 @@ type CardInput = {
   addressNumber: string;
 };
 
+type DeliveryAddress = {
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+};
+
 type PaymentBody = {
   restaurantSlug: string;
   order: Order;
   cpfCnpj: string;
   email: string;
   card?: CardInput;
+  delivery?: DeliveryAddress;
 };
 
 type AsaasCustomer = { id: string };
@@ -57,7 +65,32 @@ function calculateOrder(order: Order, products: Product[], deliveryFee: number) 
   if (coupon && subtotal + fee >= (coupon.minimumOrderValue ?? 0)) {
     discount = coupon.type === "percent" ? subtotal * (coupon.value / 100) : coupon.type === "fixed" ? coupon.value : fee;
   }
-  return Math.round(Math.max(subtotal + fee - discount, 0) * 100) / 100;
+  const round = (value: number) => Math.round(value * 100) / 100;
+  return {
+    subtotal: round(subtotal),
+    deliveryFee: round(fee),
+    discount: round(discount),
+    amount: round(Math.max(subtotal + fee - discount, 0))
+  };
+}
+
+// Frete: usa a cotacao dinamica do ZL Hub para delivery; cai para a taxa fixa
+// do restaurante se a integracao estiver desligada ou indisponivel.
+async function resolveDeliveryFee(order: Order, delivery: DeliveryAddress | undefined, fallbackFee: number) {
+  if (order.type !== "delivery") return 0;
+  if (isZlhubConfigured() && delivery?.street && delivery?.neighborhood) {
+    try {
+      const estimate = await estimateDelivery({
+        street: delivery.street,
+        number: delivery.number,
+        neighborhood: delivery.neighborhood
+      });
+      if (estimate.available) return estimate.fee;
+    } catch {
+      // segue com a taxa fixa
+    }
+  }
+  return fallbackFee;
 }
 
 export async function POST(request: NextRequest) {
@@ -82,7 +115,9 @@ export async function POST(request: NextRequest) {
     ]);
     if (!snapshot || !restaurant) return NextResponse.json({ error: "Cardapio indisponivel para pagamento." }, { status: 400 });
 
-    const amount = calculateOrder(body.order, snapshot.products as Product[], Number(restaurant.delivery_fee));
+    const deliveryFee = await resolveDeliveryFee(body.order, body.delivery, Number(restaurant.delivery_fee));
+    const totals = calculateOrder(body.order, snapshot.products as Product[], deliveryFee);
+    const amount = totals.amount;
     if (amount < 0.5) return NextResponse.json({ error: "Valor do pedido invalido." }, { status: 400 });
 
     const existing = await asaasRequest<AsaasList<AsaasCustomer>>(`/customers?cpfCnpj=${cpfCnpj}&limit=1`);
@@ -101,7 +136,7 @@ export async function POST(request: NextRequest) {
     const { data: session, error: sessionError } = await admin.from("asaas_payment_sessions").insert({
       restaurant_slug: body.restaurantSlug,
       customer_user_id: auth.user?.id ?? null,
-      order_data: { ...body.order, total: amount },
+      order_data: { ...body.order, subtotal: totals.subtotal, deliveryFee: totals.deliveryFee, discount: totals.discount, total: amount },
       payment_method: body.order.paymentMethod,
       amount,
       asaas_customer_id: customer.id
