@@ -3,7 +3,7 @@
 
 const defaultBaseUrl = "https://integracao.zlhub.com.br";
 
-// Endereco de partida da loja. Pode ser sobrescrito por env.
+// Endereço de partida da loja. Pode ser sobrescrito por env.
 const origin = {
   endereco: process.env.ZLHUB_ORIGIN_ENDERECO ?? "R. Aparecida, 1341",
   bairro: process.env.ZLHUB_ORIGIN_BAIRRO ?? "Santa Rosalia",
@@ -23,7 +23,7 @@ function baseUrl() {
   return (process.env.ZLHUB_API_URL ?? defaultBaseUrl).replace(/\/$/, "");
 }
 
-// O token vale 3 dias; guardamos em memoria do processo com folga.
+// O token vale 3 dias; guardamos em memória do processo com folga.
 let tokenCache: { token: string; expiresAt: number } | null = null;
 
 async function zlhubFetch(path: string, init: RequestInit) {
@@ -62,7 +62,7 @@ function pickString(source: unknown, keys: string[]): string | null {
 
 export async function getZlhubToken(): Promise<string> {
   const apiKey = process.env.ZLHUB_API_KEY;
-  if (!apiKey) throw new Error("Integracao de entregas nao configurada.");
+  if (!apiKey) throw new Error("Integração de entregas não configurada.");
 
   if (tokenCache && tokenCache.expiresAt > Date.now()) return tokenCache.token;
 
@@ -70,7 +70,7 @@ export async function getZlhubToken(): Promise<string> {
   const token =
     pickString(data, ["token", "access_token", "accessToken"]) ??
     pickString((data as { data?: unknown })?.data, ["token", "access_token", "accessToken"]);
-  if (!token) throw new Error("ZL Hub nao retornou o token de autenticacao.");
+  if (!token) throw new Error("ZL Hub não retornou o token de autenticação.");
 
   // renova bem antes dos 3 dias
   tokenCache = { token, expiresAt: Date.now() + 2 * 24 * 60 * 60 * 1000 };

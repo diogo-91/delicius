@@ -14,10 +14,10 @@ export function interpretCustomerMessage(message: string): CustomerIntent {
 export function answerWithMockAgent(message: string): AgentResponse {
   const intent = interpretCustomerMessage(message);
   if (intent.type === "browse_menu") {
-    return { intent, message: "Claro. Vou te enviar o cardapio digital para escolher seus itens." };
+    return { intent, message: "Claro. Vou te enviar o cardápio digital para escolher seus itens." };
   }
   if (intent.type === "order_status") {
-    return { intent, message: "Vou consultar o status do seu pedido e ja te retorno." };
+    return { intent, message: "Vou consultar o status do seu pedido e já te retorno." };
   }
-  return { intent, message: "Entendi. Esta resposta sera conectada ao agente OpenAI na proxima etapa." };
+  return { intent, message: "Entendi. Esta resposta será conectada ao agente OpenAI na próxima etapa." };
 }

@@ -4,10 +4,10 @@ const promoCategoryNames = ["promoção do dia", "promocao do dia"];
 const crossSellCategoryNames = ["bebidas", "salgados", "docinhos por cento", "docinhos"];
 
 /**
- * Nao existe sinal real de "mais vendido" no modelo de dados hoje (sem coluna
- * featured/order_count). Heuristica documentada: produtos da categoria "Promocao
+ * Não existe sinal real de "mais vendido" no modelo de dados hoje (sem coluna
+ * featured/order_count). Heurística documentada: produtos da categoria "Promoção
  * do dia" primeiro, depois um produto por categoria (round-robin) para variar,
- * ate completar `count`. Nunca chamar isso de "mais vendido" na UI.
+ * até completar `count`. Nunca chamar isso de "mais vendido" na UI.
  */
 export function getHighlightProducts(categories: Category[], products: Product[], excludeIds: string[] = [], count = 6): Product[] {
   const promoCategory = categories.find(
@@ -48,9 +48,9 @@ export function getHighlightProducts(categories: Category[], products: Product[]
 }
 
 /**
- * Sem tabela de combos/cross-sell no banco. Heuristica documentada: produtos
- * mais baratos das categorias de bebidas/salgados/docinhos, excluindo o que ja
- * esta no carrinho. Nao e um dado real de "combina bem com X".
+ * Sem tabela de combos/cross-sell no banco. Heurística documentada: produtos
+ * mais baratos das categorias de bebidas/salgados/docinhos, excluindo o que já
+ * está no carrinho. Não é um dado real de "combina bem com X".
  */
 export function getCrossSellProducts(categories: Category[], products: Product[], excludeIds: string[] = [], count = 3): Product[] {
   const crossSellCategoryIds = new Set(

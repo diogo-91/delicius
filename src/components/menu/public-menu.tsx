@@ -150,9 +150,9 @@ function getStoreOpenStatus(restaurant: Restaurant, now: Date) {
 
 const orderTimelineSteps: Array<{ status: OrderStatus; title: string; description: string }> = [
   { status: "new", title: "Pedido recebido", description: "O estabelecimento recebeu seu pedido." },
-  { status: "preparing", title: "Em preparo", description: "Sua compra esta sendo preparada." },
+  { status: "preparing", title: "Em preparo", description: "Sua compra está sendo preparada." },
   { status: "ready", title: "Pronto", description: "Pedido pronto para retirada ou envio." },
-  { status: "out_for_delivery", title: "Saiu para entrega", description: "O pedido esta a caminho." },
+  { status: "out_for_delivery", title: "Saiu para entrega", description: "O pedido está a caminho." },
   { status: "finished", title: "Finalizado", description: "Pedido concluido. Bom apetite!" }
 ];
 
@@ -310,7 +310,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       setPixPayment(saved.pix ?? null);
       setPaymentMethod(saved.order.paymentMethod);
       setPaymentStatus("pending");
-      setPaymentMessage("Retomando a confirmacao do seu pagamento...");
+      setPaymentMessage("Retomando a confirmação do seu pagamento...");
       setCartModalOpen(true);
     } catch {
       window.localStorage.removeItem(pendingPaymentStorageKey);
@@ -336,7 +336,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         window.localStorage.removeItem(pendingPaymentStorageKey);
       } else if (["failed", "refunded", "cancelled"].includes(result.status)) {
         setPaymentStatus("failed");
-        setPaymentMessage("O pagamento nao foi concluido. Tente novamente.");
+        setPaymentMessage("O pagamento não foi concluído. Tente novamente.");
         setPaymentSessionId(null);
         window.localStorage.removeItem(pendingPaymentStorageKey);
       }
@@ -495,9 +495,9 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   }, [supabaseConfigured]);
 
   // Recuperacao automatica: se o snapshot ficou com produtos apontando para
-  // categorias que nao existem mais (ex.: categorias re-seedadas no painel),
-  // os itens orfaos sao agrupados numa categoria de fallback para nao sumirem
-  // do cardapio publico.
+  // categorias que não existem mais (ex.: categorias re-seedadas no painel),
+  // os itens órfãos são agrupados numa categoria de fallback para não sumirem
+  // do cardápio público.
   const orphanCategoryId = "cat_sem_categoria";
   const knownCategoryIds = useMemo(() => new Set(categories.map((category) => category.id)), [categories]);
   const hasOrphanProducts = useMemo(
@@ -762,7 +762,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       return;
     }
     if (type === "delivery" && addressMode === "saved" && !formatCustomerAddress(customerProfile)) {
-      setPaymentMessage("Cadastre um endereco na Area do cliente ou selecione outro endereco para entrega.");
+      setPaymentMessage("Cadastre um endereço na Área do cliente ou selecione outro endereço para entrega.");
       return;
     }
     const payerCpf = paymentMethod === "credit_card" ? cardForm.cpf : payerForm.cpfCnpj;
@@ -772,7 +772,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       return;
     }
     if (paymentMethod === "credit_card" && (!cardForm.holder || !cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.postalCode || !cardForm.addressNumber)) {
-      setPaymentMessage("Preencha todos os dados do cartao e do titular.");
+      setPaymentMessage("Preencha todos os dados do cartão e do titular.");
       return;
     }
 
@@ -804,7 +804,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         const supabase = createSupabaseBrowserClient();
         await supabase.auth.signInAnonymously();
       } catch {
-        // Pagamento como convidado continua disponivel mesmo sem login anonimo no Supabase.
+        // Pagamento como convidado continua disponível mesmo sem login anônimo no Supabase.
       }
     }
 
@@ -833,7 +833,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         })
       });
       const result = (await response.json()) as { error?: string; sessionId?: string; status?: string; pix?: { encodedImage: string; payload: string; expirationDate: string } };
-      if (!response.ok || !result.sessionId) throw new Error(result.error || "Nao foi possivel criar o pagamento.");
+      if (!response.ok || !result.sessionId) throw new Error(result.error || "Não foi possível criar o pagamento.");
       setPendingOrder(order);
       setPaymentSessionId(result.sessionId);
       setPixPayment(result.pix ?? null);
@@ -842,14 +842,14 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         pendingPaymentStorageKey,
         JSON.stringify({ sessionId: result.sessionId, order, pix: result.pix ?? null, createdAt: Date.now() })
       );
-      setPaymentMessage(paymentMethod === "pix" ? "Escaneie o QR Code ou copie o codigo Pix. A confirmacao e automatica." : "Pagamento enviado. Aguardando confirmacao do Asaas.");
+      setPaymentMessage(paymentMethod === "pix" ? "Escaneie o QR Code ou copie o código Pix. A confirmação é automática." : "Pagamento enviado. Aguardando confirmação do Asaas.");
       setSlotPickerOpen(false);
       setSelectedSlot(null);
       setLastOrderWasGuest(wasGuest);
       setGuestSavePromptDismissed(false);
     } catch (error) {
       setPaymentStatus("failed");
-      setPaymentMessage(error instanceof Error ? error.message : "Nao foi possivel processar o pagamento.");
+      setPaymentMessage(error instanceof Error ? error.message : "Não foi possível processar o pagamento.");
     }
   }
 
@@ -903,8 +903,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       } catch (error) {
         setProfileMessage(
           error instanceof Error
-            ? `Dados salvos neste navegador, mas nao foi possivel sincronizar com sua conta: ${error.message}`
-            : "Dados salvos neste navegador, mas nao foi possivel sincronizar com sua conta."
+            ? `Dados salvos neste navegador, mas não foi possível sincronizar com sua conta: ${error.message}`
+            : "Dados salvos neste navegador, mas não foi possível sincronizar com sua conta."
         );
       }
     }
@@ -921,7 +921,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
   async function signInCustomerWithPassword() {
     if (!supabaseConfigured) {
-      setAuthMessage("Supabase nao configurado. Use o cliente teste por enquanto.");
+      setAuthMessage("Supabase não configurado. Use o cliente teste por enquanto.");
       return;
     }
 
@@ -933,7 +933,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     });
 
     if (error) {
-      setAuthMessage(error.message === "Invalid login credentials" ? "E-mail ou senha invalidos." : error.message);
+      setAuthMessage(error.message === "Invalid login credentials" ? "E-mail ou senha inválidos." : error.message);
       return;
     }
 
@@ -957,13 +957,13 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     const baseTotal = subtotal + deliveryFee;
     if (!coupon) {
       setAppliedCoupon(null);
-      setCouponMessage("Cupom invalido. Teste DEL10, DOCE5 ou FRETEGRATIS.");
+      setCouponMessage("Cupom inválido. Teste DEL10, DOCE5 ou FRETEGRATIS.");
       return;
     }
 
     if (coupon.minimumOrderValue && baseTotal < coupon.minimumOrderValue) {
       setAppliedCoupon(null);
-      setCouponMessage(`Cupom valido para pedidos acima de ${formatCurrency(coupon.minimumOrderValue)}.`);
+      setCouponMessage(`Cupom válido para pedidos acima de ${formatCurrency(coupon.minimumOrderValue)}.`);
       return;
     }
 
@@ -989,7 +989,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     }
 
     if (!supabaseConfigured) {
-      setAuthMessage("Cadastro local criado. Ao conectar o Supabase, esta conta sera persistida.");
+      setAuthMessage("Cadastro local criado. Ao conectar o Supabase, esta conta será persistida.");
       setCustomer((current) => ({ ...current, name: signupForm.name, phone: signupForm.phone }));
       setLocalCustomerSession(true);
       setAuthModalOpen(false);
@@ -1091,7 +1091,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-700">
         <Check className="h-8 w-8" />
       </div>
-      <h3 className="mt-6 text-xl font-semibold text-ink">Seu pedido esta prontinho!</h3>
+      <h3 className="mt-6 text-xl font-semibold text-ink">Seu pedido está prontinho!</h3>
       <p className="mt-3 text-sm leading-6 text-muted">O pedido foi enviado para o painel administrativo do estabelecimento.</p>
       <button
         className="mt-6 w-full rounded-xl bg-brand-50 p-4 text-sm font-bold text-brand-700 transition hover:bg-brand-100"
@@ -1120,7 +1120,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           </div>
           {createdOrder.customer.address && (
             <div className="mt-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereco</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereço</p>
               <p className="mt-1 text-ink">{createdOrder.customer.address}</p>
             </div>
           )}
@@ -1193,7 +1193,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       <div className="space-y-3">
         {cart.length === 0 && (
           <div className="rounded-xl bg-white/70 p-5 text-center text-sm text-muted ring-1 ring-line/70">
-            Sua sacola ainda esta vazia. Escolha um item do cardapio para continuar.
+            Sua sacola ainda está vazia. Escolha um item do cardápio para continuar.
           </div>
         )}
         {cart.map((item, index) => (
@@ -1277,7 +1277,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         </div>
         {type === "delivery" && (
           <div className="space-y-3 rounded-xl border border-line bg-white/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereco de entrega</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereço de entrega</p>
             <button
               className={`w-full rounded-xl border p-3 text-left transition ${
                 addressMode === "saved" ? "border-success-600 bg-success-50 text-ink" : "border-line bg-white text-muted hover:border-success-500"
@@ -1285,8 +1285,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               onClick={() => setAddressMode("saved")}
               type="button"
             >
-              <span className="block text-sm font-semibold text-ink">Usar endereco cadastrado</span>
-              <span className="mt-1 block text-xs leading-5">{formatCustomerAddress(customerProfile) || "Cadastre seu endereco na Area do cliente."}</span>
+              <span className="block text-sm font-semibold text-ink">Usar endereço cadastrado</span>
+              <span className="mt-1 block text-xs leading-5">{formatCustomerAddress(customerProfile) || "Cadastre seu endereço na Área do cliente."}</span>
             </button>
             <button
               className={`h-10 w-full rounded-xl border text-sm font-semibold transition ${
@@ -1295,15 +1295,15 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               onClick={() => setAddressMode("other")}
               type="button"
             >
-              Entregar em outro endereco
+              Entregar em outro endereço
             </button>
             {addressMode === "other" && (
               <div className="grid gap-3 sm:grid-cols-[1fr_96px]">
                 <Input className="bg-white" placeholder="Rua / Avenida" value={customer.street} onChange={(event) => setCustomer({ ...customer, street: event.target.value })} />
-                <Input className="bg-white" placeholder="Numero" value={customer.number} onChange={(event) => setCustomer({ ...customer, number: event.target.value })} />
+                <Input className="bg-white" placeholder="Número" value={customer.number} onChange={(event) => setCustomer({ ...customer, number: event.target.value })} />
                 <Input className="bg-white sm:col-span-2" placeholder="Bairro" value={customer.neighborhood} onChange={(event) => setCustomer({ ...customer, neighborhood: event.target.value })} />
                 <Input className="bg-white sm:col-span-2" placeholder="Complemento (apto, bloco, casa)" value={customer.complement} onChange={(event) => setCustomer({ ...customer, complement: event.target.value })} />
-                <Textarea className="min-h-20 bg-white sm:col-span-2" placeholder="Ponto de referencia ou observacao da entrega" value={customer.reference} onChange={(event) => setCustomer({ ...customer, reference: event.target.value })} />
+                <Textarea className="min-h-20 bg-white sm:col-span-2" placeholder="Ponto de referência ou observação da entrega" value={customer.reference} onChange={(event) => setCustomer({ ...customer, reference: event.target.value })} />
               </div>
             )}
           </div>
@@ -1334,8 +1334,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           <div className="grid gap-2 sm:grid-cols-3">
             {[
               { value: "pix", label: "Pix", disabled: false },
-              { value: "credit_card", label: "Cartao de credito", disabled: false },
-              { value: "debit_card", label: "Debito online", disabled: true }
+              { value: "credit_card", label: "Cartão de crédito", disabled: false },
+              { value: "debit_card", label: "Débito online", disabled: true }
             ].map((option) => (
               <button
                 key={option.value}
@@ -1344,7 +1344,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
                 }`}
                 onClick={() => !option.disabled && selectPaymentMethod(option.value as PaymentMethod)}
                 disabled={option.disabled}
-                title={option.disabled ? "O Asaas ainda nao oferece debito no checkout transparente pela API publica." : undefined}
+                title={option.disabled ? "O Asaas ainda não oferece débito no checkout transparente pela API pública." : undefined}
                 type="button"
               >
                 {option.label}
@@ -1377,8 +1377,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           </div>
         ) : (
           <div className="grid gap-3 rounded-xl border border-line bg-white/60 p-3 sm:grid-cols-2">
-            <Input className="bg-white sm:col-span-2" placeholder="Nome impresso no cartao" value={cardForm.holder} onChange={(event) => setCardForm({ ...cardForm, holder: event.target.value })} />
-            <Input className="bg-white sm:col-span-2" placeholder="Numero do cartao" value={cardForm.number} onChange={(event) => setCardForm({ ...cardForm, number: event.target.value })} />
+            <Input className="bg-white sm:col-span-2" placeholder="Nome impresso no cartão" value={cardForm.holder} onChange={(event) => setCardForm({ ...cardForm, holder: event.target.value })} />
+            <Input className="bg-white sm:col-span-2" placeholder="Número do cartão" value={cardForm.number} onChange={(event) => setCardForm({ ...cardForm, number: event.target.value })} />
             <Input className="bg-white" placeholder="Validade MM/AA" value={cardForm.expiry} onChange={(event) => setCardForm({ ...cardForm, expiry: event.target.value })} />
             <Input className="bg-white" placeholder="CVV" value={cardForm.cvv} onChange={(event) => setCardForm({ ...cardForm, cvv: event.target.value })} />
             <Input className="bg-white" placeholder="CPF/CNPJ do titular" value={cardForm.cpf} onChange={(event) => setCardForm({ ...cardForm, cpf: event.target.value })} />
@@ -2174,7 +2174,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
               {historyOrder.customer.address && (
                 <div className="mt-4 rounded-xl border border-line bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereco</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereço</p>
                   <p className="mt-2 text-sm text-ink">{historyOrder.customer.address}</p>
                 </div>
               )}

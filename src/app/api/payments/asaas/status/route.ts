@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const { data: auth } = await supabase.auth.getUser();
   const sessionId = request.nextUrl.searchParams.get("sessionId");
-  if (!sessionId) return NextResponse.json({ error: "Sessao invalida." }, { status: 400 });
+  if (!sessionId) return NextResponse.json({ error: "Sessão inválida." }, { status: 400 });
 
   const admin = createSupabaseAdminClient();
   let query = admin.from("asaas_payment_sessions")
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     .eq("id", sessionId);
   if (auth.user) query = query.eq("customer_user_id", auth.user.id);
   const { data } = await query.maybeSingle();
-  if (!data) return NextResponse.json({ error: "Pagamento nao encontrado." }, { status: 404 });
+  if (!data) return NextResponse.json({ error: "Pagamento não encontrado." }, { status: 404 });
 
   const reconciled = await reconcileSessionWithAsaas(admin, data);
   return NextResponse.json({ status: reconciled.status, customer_order_id: reconciled.customer_order_id });

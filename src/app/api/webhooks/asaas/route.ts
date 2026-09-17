@@ -19,11 +19,11 @@ export async function POST(request: NextRequest) {
   const configuredToken = process.env.ASAAS_WEBHOOK_TOKEN;
   const receivedToken = request.headers.get("asaas-access-token");
   if (!configuredToken || receivedToken !== configuredToken) {
-    return NextResponse.json({ error: "Token invalido." }, { status: 401 });
+    return NextResponse.json({ error: "Token inválido." }, { status: 401 });
   }
 
   const payload = (await request.json()) as AsaasWebhook;
-  if (!payload.event) return NextResponse.json({ error: "Evento invalido." }, { status: 400 });
+  if (!payload.event) return NextResponse.json({ error: "Evento inválido." }, { status: 400 });
 
   // Asaas normally sends a unique `id`, but older/edge payloads may omit it —
   // derive a stable dedupe key so we never reject (rejections pause the queue).

@@ -45,15 +45,15 @@ function calculateOrder(order: Order, products: Product[], deliveryFee: number) 
   for (const item of order.items) {
     const product = products.find((candidate) => candidate.id === item.productId && candidate.active);
     if (!product || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 50) {
-      throw new Error("Um item do carrinho nao esta mais disponivel.");
+      throw new Error("Um item do carrinho não está mais disponível.");
     }
     const unitPrice = item.variation
       ? product.variations.find((variation) => variation.id === item.variation?.id)?.price
       : product.price;
-    if (unitPrice === undefined) throw new Error("Variacao de produto invalida.");
+    if (unitPrice === undefined) throw new Error("Variação de produto inválida.");
     const addons = item.addons.reduce((sum, selected) => {
       const addon = product.addons.find((candidate) => candidate.id === selected.id);
-      if (!addon) throw new Error("Adicional de produto invalido.");
+      if (!addon) throw new Error("Adicional de produto inválido.");
       return sum + addon.price;
     }, 0);
     subtotal += (unitPrice + addons) * item.quantity;
@@ -74,8 +74,8 @@ function calculateOrder(order: Order, products: Product[], deliveryFee: number) 
   };
 }
 
-// Frete: usa a cotacao dinamica do ZL Hub para delivery; cai para a taxa fixa
-// do restaurante se a integracao estiver desligada ou indisponivel.
+// Frete: usa a cotação dinâmica do ZL Hub para delivery; cai para a taxa fixa
+// do restaurante se a integração estiver desligada ou indisponível.
 async function resolveDeliveryFee(order: Order, delivery: DeliveryAddress | undefined, fallbackFee: number) {
   if (order.type !== "delivery") return 0;
   if (isZlhubConfigured() && delivery?.street && delivery?.neighborhood) {
@@ -99,13 +99,13 @@ export async function POST(request: NextRequest) {
     const { data: auth } = await supabase.auth.getUser();
     const body = (await request.json()) as PaymentBody;
     if (!body.order?.items?.length || !["pix", "credit_card"].includes(body.order.paymentMethod)) {
-      return NextResponse.json({ error: "Dados do pagamento invalidos." }, { status: 400 });
+      return NextResponse.json({ error: "Dados do pagamento inválidos." }, { status: 400 });
     }
 
     const cpfCnpj = digits(body.card?.cpfCnpj ?? body.cpfCnpj);
     const email = (body.card?.email ?? body.email).trim().toLowerCase();
     if (![11, 14].includes(cpfCnpj.length) || !email.includes("@")) {
-      return NextResponse.json({ error: "Informe CPF/CNPJ e e-mail validos." }, { status: 400 });
+      return NextResponse.json({ error: "Informe CPF/CNPJ e e-mail válidos." }, { status: 400 });
     }
 
     const admin = createSupabaseAdminClient();
@@ -113,12 +113,12 @@ export async function POST(request: NextRequest) {
       admin.from("menu_snapshots").select("products").eq("restaurant_slug", body.restaurantSlug).single(),
       admin.from("restaurants").select("delivery_fee").eq("slug", body.restaurantSlug).single()
     ]);
-    if (!snapshot || !restaurant) return NextResponse.json({ error: "Cardapio indisponivel para pagamento." }, { status: 400 });
+    if (!snapshot || !restaurant) return NextResponse.json({ error: "Cardápio indisponível para pagamento." }, { status: 400 });
 
     const deliveryFee = await resolveDeliveryFee(body.order, body.delivery, Number(restaurant.delivery_fee));
     const totals = calculateOrder(body.order, snapshot.products as Product[], deliveryFee);
     const amount = totals.amount;
-    if (amount < 0.5) return NextResponse.json({ error: "Valor do pedido invalido." }, { status: 400 });
+    if (amount < 0.5) return NextResponse.json({ error: "Valor do pedido inválido." }, { status: 400 });
 
     const existing = await asaasRequest<AsaasList<AsaasCustomer>>(`/customers?cpfCnpj=${cpfCnpj}&limit=1`);
     const customer = existing.data[0] ?? (await asaasRequest<AsaasCustomer>("/customers", {
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       amount,
       asaas_customer_id: customer.id
     }).select("id").single();
-    if (sessionError || !session) throw new Error("Nao foi possivel iniciar o pagamento.");
+    if (sessionError || !session) throw new Error("Não foi possível iniciar o pagamento.");
 
     const paymentPayload: Record<string, unknown> = {
       customer: customer.id,
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (body.order.paymentMethod === "credit_card") {
-      if (!body.card) throw new Error("Dados do cartao nao informados.");
+      if (!body.card) throw new Error("Dados do cartão não informados.");
       const [expiryMonth, shortYear] = body.card.expiry.split("/").map((value) => digits(value));
       paymentPayload.creditCard = {
         holderName: body.card.holderName,

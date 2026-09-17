@@ -17,7 +17,7 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "Kamanda AI",
-  description: "SaaS para cardapio digital, pedidos e atendimento via WhatsApp."
+  description: "SaaS para cardápio digital, pedidos e atendimento via WhatsApp."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -84,15 +84,15 @@ export default function CompanyPage() {
   async function handleBannerLink(productId: string) {
     const nextId = productId || undefined;
     setBannerLinkSaving(true);
-    setHeroMessage(nextId ? "Vinculando o banner ao produto..." : "Removendo o vinculo do banner...");
+    setHeroMessage(nextId ? "Vinculando o banner ao produto..." : "Removendo o vínculo do banner...");
     try {
       await saveRestaurantBannerLinkProductId(form.id, nextId);
       const nextRestaurant = { ...form, bannerLinkProductId: nextId };
       saveRestaurant(nextRestaurant);
       setForm(nextRestaurant);
-      setHeroMessage(nextId ? "Banner vinculado. Ao tocar nele, o cliente vai direto para esse produto." : "Vinculo removido. O banner volta a ser apenas uma imagem.");
+      setHeroMessage(nextId ? "Banner vinculado. Ao tocar nele, o cliente vai direto para esse produto." : "Vínculo removido. O banner volta a ser apenas uma imagem.");
     } catch (error) {
-      setHeroMessage(error instanceof Error ? `Falha ao salvar o vinculo: ${error.message}` : "Falha ao salvar o vinculo do banner.");
+      setHeroMessage(error instanceof Error ? `Falha ao salvar o vínculo: ${error.message}` : "Falha ao salvar o vínculo do banner.");
     } finally {
       setBannerLinkSaving(false);
     }

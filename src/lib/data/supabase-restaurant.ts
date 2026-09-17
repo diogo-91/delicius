@@ -212,11 +212,11 @@ export async function getAdminRestaurant() {
 }
 
 export async function saveRestaurantToSupabase(restaurant: Restaurant) {
-  if (!isSupabaseConfigured()) throw new Error("Supabase nao configurado.");
+  if (!isSupabaseConfigured()) throw new Error("Supabase não configurado.");
 
   const supabase = createSupabaseBrowserClient();
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) throw new Error("Usuario nao autenticado.");
+  if (!userData.user) throw new Error("Usuário não autenticado.");
 
   const weeklySchedule = restaurant.weeklySchedule ?? defaultWeeklySchedule;
   const openingHours = formatScheduleSummary(weeklySchedule);
@@ -246,7 +246,7 @@ export async function saveRestaurantBannerUrl(restaurantId: string, bannerUrl?: 
 
   const supabase = createSupabaseBrowserClient();
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) throw new Error("Usuario nao autenticado.");
+  if (!userData.user) throw new Error("Usuário não autenticado.");
 
   const { data, error } = await supabase
     .from("restaurants")
@@ -256,7 +256,7 @@ export async function saveRestaurantBannerUrl(restaurantId: string, bannerUrl?: 
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new Error("Restaurante nao encontrado ou sem permissao para alteracao.");
+  if (!data) throw new Error("Restaurante não encontrado ou sem permissão para alteração.");
 }
 
 export async function saveRestaurantBannerLinkProductId(restaurantId: string, productId?: string) {
@@ -264,7 +264,7 @@ export async function saveRestaurantBannerLinkProductId(restaurantId: string, pr
 
   const supabase = createSupabaseBrowserClient();
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) throw new Error("Usuario nao autenticado.");
+  if (!userData.user) throw new Error("Usuário não autenticado.");
 
   const { data, error } = await supabase
     .from("restaurants")
@@ -274,5 +274,5 @@ export async function saveRestaurantBannerLinkProductId(restaurantId: string, pr
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new Error("Restaurante nao encontrado ou sem permissao para alteracao.");
+  if (!data) throw new Error("Restaurante não encontrado ou sem permissão para alteração.");
 }

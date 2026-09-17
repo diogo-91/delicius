@@ -12,7 +12,7 @@ import { AdminInput, AdminSelect, AdminTextarea } from "@/components/admin/ui/in
 const typeLabels: Record<CouponType, string> = {
   percent: "Percentual",
   fixed: "Valor fixo",
-  delivery: "Frete gratis"
+  delivery: "Frete grátis"
 };
 
 function describeCoupon(coupon: Coupon) {

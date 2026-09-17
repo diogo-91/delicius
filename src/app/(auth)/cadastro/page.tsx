@@ -9,7 +9,7 @@ export default function SignupPage() {
         <h1 className="text-2xl font-bold text-ink">Criar restaurante</h1>
         <p className="mt-2 text-sm text-muted">Conta inicial vinculada a uma empresa para o modelo multitenant.</p>
         <SignupForm />
-        <Link href="/login" className="mt-5 inline-block text-sm font-medium text-brand-700">Ja tenho conta</Link>
+        <Link href="/login" className="mt-5 inline-block text-sm font-medium text-brand-700">Já tenho conta</Link>
       </section>
     </main>
   );

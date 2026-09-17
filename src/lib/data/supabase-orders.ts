@@ -14,7 +14,7 @@ export async function createRemoteOrder(restaurantSlug: string, order: Order): P
     order_payload: order
   });
 
-  if (error || !data) throw error ?? new Error("Nao foi possivel enviar o pedido.");
+  if (error || !data) throw error ?? new Error("Não foi possível enviar o pedido.");
 
   return { ...order, ...(data.order_data as Order), id: data.id as string, code: data.code as string };
 }

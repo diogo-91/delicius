@@ -9,13 +9,13 @@ export type Review = {
 };
 
 /**
- * PLACEHOLDER ILUSTRATIVO: nao existe tabela de avaliacoes/reviews no banco
- * hoje. Estes depoimentos e a nota media sao conteudo de exemplo, aprovados
- * pelo cliente como placeholder visivel ate existirem avaliacoes reais.
+ * PLACEHOLDER ILUSTRATIVO: não existe tabela de avaliações/reviews no banco
+ * hoje. Estes depoimentos e a nota média são conteúdo de exemplo, aprovados
+ * pelo cliente como placeholder visível até existirem avaliações reais.
  * Trocar `placeholderReviews`/`placeholderRating` por dados reais assim que
- * houver uma fonte (ex: tabela `reviews` + agregacao de nota media real).
- * Os avatares sao iniciais geradas (nao fotos de pessoas reais), para nao
- * atribuir a imagem de alguem real a um depoimento ficticio.
+ * houver uma fonte (ex: tabela `reviews` + agregação de nota média real).
+ * Os avatares são iniciais geradas (não fotos de pessoas reais), para não
+ * atribuir a imagem de alguém real a um depoimento fictício.
  */
 export const placeholderReviews: Review[] = [
   { id: "review_1", authorName: "Juliana M.", rating: 5, comment: "O bolo Alpino é surreal! Melhor que já provei." },

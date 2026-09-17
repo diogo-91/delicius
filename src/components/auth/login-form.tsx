@@ -26,7 +26,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
     setLoading(false);
 
     if (error) {
-      setMessage(error.message === "Invalid login credentials" ? "E-mail ou senha invalidos." : error.message);
+      setMessage(error.message === "Invalid login credentials" ? "E-mail ou senha inválidos." : error.message);
       return;
     }
 

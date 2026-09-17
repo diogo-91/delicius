@@ -157,7 +157,7 @@ export function buildOrder(payload: CreateOrderPayload) {
     deliveryFee,
     total: subtotal + deliveryFee - discount,
     createdAt: new Date().toISOString(),
-    history: [{ id: `hist_${Date.now()}`, status: "new", createdAt: new Date().toISOString(), note: "Pedido enviado pelo cardapio publico" }]
+    history: [{ id: `hist_${Date.now()}`, status: "new", createdAt: new Date().toISOString(), note: "Pedido enviado pelo cardápio público" }]
   };
 
   return order;

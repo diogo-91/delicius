@@ -7,7 +7,7 @@ export default function RecoverPasswordPage() {
       <section className="w-full max-w-md rounded-lg border border-white/70 bg-white p-8 shadow-panel">
         <img src="/delicious-logo.png" alt="Delicious Gourmet" className="mb-6 h-14 w-auto object-contain" />
         <h1 className="text-2xl font-bold text-ink">Recuperar senha</h1>
-        <p className="mt-2 text-sm text-muted">Informe seu email para receber o link de redefinicao.</p>
+        <p className="mt-2 text-sm text-muted">Informe seu email para receber o link de redefinição.</p>
         <RecoverPasswordForm />
         <Link href="/login" className="mt-5 inline-block text-sm font-medium text-brand-700">Voltar para login</Link>
       </section>

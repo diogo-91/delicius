@@ -2,7 +2,7 @@ const defaultAsaasUrl = "https://api.asaas.com/v3";
 
 export async function asaasRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const apiKey = process.env.ASAAS_API_KEY;
-  if (!apiKey) throw new Error("Gateway de pagamento nao configurado.");
+  if (!apiKey) throw new Error("Gateway de pagamento não configurado.");
 
   const response = await fetch(`${process.env.ASAAS_API_URL ?? defaultAsaasUrl}${path}`, {
     ...init,

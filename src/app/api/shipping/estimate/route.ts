@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as EstimateBody;
   } catch {
-    return NextResponse.json({ error: "Requisicao invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Requisição inválida." }, { status: 400 });
   }
 
   const street = body.street?.trim();

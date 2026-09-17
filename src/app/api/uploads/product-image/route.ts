@@ -13,11 +13,11 @@ export async function POST(request: Request) {
   const productId = String(formData.get("productId") ?? "product");
 
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Arquivo nao enviado." }, { status: 400 });
+    return NextResponse.json({ error: "Arquivo não enviado." }, { status: 400 });
   }
 
   if (!allowedTypes.has(file.type)) {
-    return NextResponse.json({ error: "Formato de imagem nao permitido." }, { status: 400 });
+    return NextResponse.json({ error: "Formato de imagem não permitido." }, { status: 400 });
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";

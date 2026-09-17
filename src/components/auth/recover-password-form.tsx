@@ -19,7 +19,7 @@ export function RecoverPasswordForm() {
     });
     setLoading(false);
 
-    setMessage(error ? error.message : "Enviamos o link de redefinicao para seu e-mail.");
+    setMessage(error ? error.message : "Enviamos o link de redefinição para seu e-mail.");
   }
 
   return (

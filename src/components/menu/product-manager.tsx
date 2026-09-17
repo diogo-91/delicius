@@ -67,7 +67,7 @@ export function ProductManager() {
     };
     // Parte das categorias/produtos vive apenas no snapshot do Supabase e nunca
     // e escrita no localStorage. Por isso a nova categoria precisa ser mesclada
-    // no estado atual (que veio do snapshot) e nao no retorno de saveCategory,
+    // no estado atual (que veio do snapshot) e não no retorno de saveCategory,
     // que reidrata a partir do seed e apagaria as categorias reais.
     const next = [...categories, category];
     saveCategory(category);
@@ -75,7 +75,7 @@ export function ProductManager() {
     setForm((current) => ({ ...current, categoryId: category.id }));
     setNewCategoryName("");
     saveMenuSnapshot(restaurantSlug, next, items).catch((error) => {
-      setUploadMessage(error instanceof Error ? `Categoria criada localmente, mas nao publicada: ${error.message}` : "Categoria criada localmente, mas nao publicada.");
+      setUploadMessage(error instanceof Error ? `Categoria criada localmente, mas não publicada: ${error.message}` : "Categoria criada localmente, mas não publicada.");
     });
   }
 
@@ -93,7 +93,7 @@ export function ProductManager() {
     const reordered = [...categories];
     [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
     const normalized = reordered.map((category, position) => ({ ...category, sortOrder: position + 1 }));
-    persistCategories(normalized, "Ordem alterada localmente, mas nao publicada");
+    persistCategories(normalized, "Ordem alterada localmente, mas não publicada");
   }
 
   function startRenameCategory(category: Category) {
@@ -107,13 +107,13 @@ export function ProductManager() {
     const next = categories.map((category) => (category.id === editingCategoryId ? { ...category, name } : category));
     setEditingCategoryId(null);
     setEditingCategoryName("");
-    persistCategories(next, "Nome alterado localmente, mas nao publicado");
+    persistCategories(next, "Nome alterado localmente, mas não publicado");
   }
 
   function deleteCategory(category: Category) {
     const productCount = items.filter((item) => item.categoryId === category.id).length;
     if (productCount > 0) {
-      setUploadMessage(`Nao e possivel excluir "${category.name}": mova ou exclua os ${productCount} produto(s) desta categoria antes.`);
+      setUploadMessage(`Não é possível excluir "${category.name}": mova ou exclua os ${productCount} produto(s) desta categoria antes.`);
       return;
     }
     if (!window.confirm(`Excluir a categoria "${category.name}"?`)) return;
@@ -122,7 +122,7 @@ export function ProductManager() {
       .map((current, position) => ({ ...current, sortOrder: position + 1 }));
     if (form.categoryId === category.id) setForm((current) => ({ ...current, categoryId: next[0]?.id ?? "" }));
     if (editingCategoryId === category.id) setEditingCategoryId(null);
-    persistCategories(next, "Categoria excluida localmente, mas nao publicada");
+    persistCategories(next, "Categoria excluída localmente, mas não publicada");
   }
 
   function resetForm() {
@@ -157,18 +157,18 @@ export function ProductManager() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? "Nao foi possivel salvar a imagem localmente.");
+        throw new Error(data?.error ?? "Não foi possível salvar a imagem localmente.");
       }
 
       const data = (await response.json()) as { url: string };
       return {
         url: data.url,
-        message: messagePrefix ?? "Imagem salva no projeto e preservada para novas alteracoes."
+        message: messagePrefix ?? "Imagem salva no projeto e preservada para novas alterações."
       };
     }
 
     if (!supabaseConfigured) {
-      return uploadLocalFallback("Imagem salva no projeto. Configure o Supabase Storage para salvar em producao.");
+      return uploadLocalFallback("Imagem salva no projeto. Configure o Supabase Storage para salvar em produção.");
     }
 
     const extension = selectedImageFile.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -181,7 +181,7 @@ export function ProductManager() {
     });
 
     if (error) {
-      return uploadLocalFallback(`Supabase Storage nao aceitou o upload: ${error.message}. A imagem foi salva no projeto.`);
+      return uploadLocalFallback(`Supabase Storage não aceitou o upload: ${error.message}. A imagem foi salva no projeto.`);
     }
 
     const { data } = supabase.storage.from(assetsBucket).getPublicUrl(path);
@@ -221,12 +221,12 @@ export function ProductManager() {
       resetForm();
       try {
         await saveMenuSnapshot(restaurantSlug, categories, next);
-        setUploadMessage(`${uploadResult.message} Cardapio publicado no Supabase para desktop e mobile.`);
+        setUploadMessage(`${uploadResult.message} Cardápio publicado no Supabase para desktop e mobile.`);
       } catch (error) {
-        setUploadMessage(error instanceof Error ? `${uploadResult.message} Produto salvo localmente, mas nao publicado: ${error.message}` : uploadResult.message);
+        setUploadMessage(error instanceof Error ? `${uploadResult.message} Produto salvo localmente, mas não publicado: ${error.message}` : uploadResult.message);
       }
     } catch (error) {
-      setUploadMessage(error instanceof Error ? error.message : "Nao foi possivel salvar o produto.");
+      setUploadMessage(error instanceof Error ? error.message : "Não foi possível salvar o produto.");
     } finally {
       setUploading(false);
     }
@@ -238,7 +238,7 @@ export function ProductManager() {
     saveProduct(updated);
     setItems(next);
     saveMenuSnapshot(restaurantSlug, categories, next).catch((error) => {
-      setUploadMessage(error instanceof Error ? `Produto alterado localmente, mas nao publicado: ${error.message}` : "Produto alterado localmente, mas nao publicado.");
+      setUploadMessage(error instanceof Error ? `Produto alterado localmente, mas não publicado: ${error.message}` : "Produto alterado localmente, mas não publicado.");
     });
   }
 
@@ -249,7 +249,7 @@ export function ProductManager() {
     setItems(next);
     if (editingId === product.id) resetForm();
     saveMenuSnapshot(restaurantSlug, categories, next).catch((error) => {
-      setUploadMessage(error instanceof Error ? `Produto excluido localmente, mas nao publicado: ${error.message}` : "Produto excluido localmente, mas nao publicado.");
+      setUploadMessage(error instanceof Error ? `Produto excluído localmente, mas não publicado: ${error.message}` : "Produto excluído localmente, mas não publicado.");
     });
   }
 
@@ -280,7 +280,7 @@ export function ProductManager() {
       return;
     }
     if (file.size > maxImageSizeInBytes) {
-      setUploadMessage("A imagem deve ter no maximo 5 MB.");
+      setUploadMessage("A imagem deve ter no máximo 5 MB.");
       return;
     }
 
