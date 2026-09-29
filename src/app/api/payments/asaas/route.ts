@@ -40,7 +40,9 @@ type AsaasList<T> = { data: T[] };
 type AsaasPayment = { id: string; status: string };
 type AsaasPix = { encodedImage: string; payload: string; expirationDate: string };
 
-function calculateOrder(order: Order, products: Product[], deliveryFee: number) {
+// Separado de applyTotals porque o frete gratis precisa saber o subtotal
+// antes de decidir a taxa de entrega (ver POST abaixo).
+function calculateSubtotal(order: Order, products: Product[]) {
   let subtotal = 0;
   for (const item of order.items) {
     const product = products.find((candidate) => candidate.id === item.productId && candidate.active);
@@ -58,7 +60,10 @@ function calculateOrder(order: Order, products: Product[], deliveryFee: number) 
     }, 0);
     subtotal += (unitPrice + addons) * item.quantity;
   }
+  return subtotal;
+}
 
+function applyTotals(order: Order, subtotal: number, deliveryFee: number) {
   const fee = order.type === "delivery" ? deliveryFee : 0;
   const coupon = coupons.find((candidate) => candidate.code === order.couponCode && candidate.active);
   let discount = 0;
@@ -72,6 +77,27 @@ function calculateOrder(order: Order, products: Product[], deliveryFee: number) 
     discount: round(discount),
     amount: round(Math.max(subtotal + fee - discount, 0))
   };
+}
+
+// Le a taxa de entrega e o limite de frete gratis do restaurante. Tolerante a
+// migracao 015 ainda nao aplicada: se a coluna free_shipping_threshold nao
+// existir, cai para a busca sem ela em vez de derrubar o checkout inteiro.
+async function getRestaurantDeliverySettings(admin: ReturnType<typeof createSupabaseAdminClient>, slug: string) {
+  const withThreshold = await admin
+    .from("restaurants")
+    .select("delivery_fee, free_shipping_threshold")
+    .eq("slug", slug)
+    .single();
+
+  if (!withThreshold.error) {
+    const row = withThreshold.data as { delivery_fee: number | string; free_shipping_threshold: number | string | null };
+    const threshold = row.free_shipping_threshold != null ? Number(row.free_shipping_threshold) : null;
+    return { deliveryFee: Number(row.delivery_fee) || 0, freeShippingThreshold: threshold && threshold > 0 ? threshold : null };
+  }
+
+  const fallback = await admin.from("restaurants").select("delivery_fee").eq("slug", slug).single();
+  if (fallback.error || !fallback.data) return null;
+  return { deliveryFee: Number(fallback.data.delivery_fee) || 0, freeShippingThreshold: null };
 }
 
 // Frete: usa a cotação dinâmica do ZL Hub para delivery; cai para a taxa fixa
@@ -109,14 +135,20 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createSupabaseAdminClient();
-    const [{ data: snapshot }, { data: restaurant }] = await Promise.all([
+    const [snapshotResult, restaurantSettings] = await Promise.all([
       admin.from("menu_snapshots").select("products").eq("restaurant_slug", body.restaurantSlug).single(),
-      admin.from("restaurants").select("delivery_fee").eq("slug", body.restaurantSlug).single()
+      getRestaurantDeliverySettings(admin, body.restaurantSlug)
     ]);
-    if (!snapshot || !restaurant) return NextResponse.json({ error: "Cardápio indisponível para pagamento." }, { status: 400 });
+    const snapshot = snapshotResult.data;
+    if (!snapshot || !restaurantSettings) return NextResponse.json({ error: "Cardápio indisponível para pagamento." }, { status: 400 });
 
-    const deliveryFee = await resolveDeliveryFee(body.order, body.delivery, Number(restaurant.delivery_fee));
-    const totals = calculateOrder(body.order, snapshot.products as Product[], deliveryFee);
+    const subtotal = calculateSubtotal(body.order, snapshot.products as Product[]);
+    const freeShippingUnlocked =
+      body.order.type === "delivery" &&
+      restaurantSettings.freeShippingThreshold != null &&
+      subtotal >= restaurantSettings.freeShippingThreshold;
+    const deliveryFee = freeShippingUnlocked ? 0 : await resolveDeliveryFee(body.order, body.delivery, restaurantSettings.deliveryFee);
+    const totals = applyTotals(body.order, subtotal, deliveryFee);
     const amount = totals.amount;
     if (amount < 0.5) return NextResponse.json({ error: "Valor do pedido inválido." }, { status: 400 });
 

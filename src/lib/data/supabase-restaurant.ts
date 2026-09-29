@@ -144,6 +144,50 @@ async function getBannerLinkProductId(restaurantId: string): Promise<string | un
   }
 }
 
+// Mesmo padrao tolerante: migracao 015 (free_shipping_threshold) pode ainda
+// nao ter rodado em algum ambiente, entao a leitura nunca deve quebrar o
+// carregamento do restaurante.
+let freeShippingColumnAvailable = true;
+
+async function getFreeShippingThreshold(restaurantId: string): Promise<number | undefined> {
+  if (!freeShippingColumnAvailable) return undefined;
+  try {
+    const supabase = createSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("free_shipping_threshold")
+      .eq("id", restaurantId)
+      .maybeSingle();
+    if (error) {
+      if (error.code === "42703") freeShippingColumnAvailable = false;
+      return undefined;
+    }
+    const value = (data as { free_shipping_threshold?: number | string | null } | null)?.free_shipping_threshold;
+    return value != null && Number(value) > 0 ? Number(value) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function saveRestaurantFreeShippingThreshold(restaurantId: string, threshold: number | undefined) {
+  if (!isSupabaseConfigured()) return;
+
+  const supabase = createSupabaseBrowserClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error("Usuário não autenticado.");
+
+  const { data, error } = await supabase
+    .from("restaurants")
+    .update({ free_shipping_threshold: threshold && threshold > 0 ? threshold : null })
+    .eq("id", restaurantId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("Restaurante não encontrado ou sem permissão para alteração.");
+  freeShippingColumnAvailable = true;
+}
+
 export async function getPublicRestaurantBySlug(slug: string) {
   if (!isSupabaseConfigured()) return null;
 
@@ -170,11 +214,12 @@ export async function getPublicRestaurantBySlug(slug: string) {
     restaurantRow = fallback;
   }
 
-  const [businessHours, bannerLinkProductId] = await Promise.all([
+  const [businessHours, bannerLinkProductId, freeShippingThreshold] = await Promise.all([
     getBusinessHours(restaurantRow.id),
-    getBannerLinkProductId(restaurantRow.id)
+    getBannerLinkProductId(restaurantRow.id),
+    getFreeShippingThreshold(restaurantRow.id)
   ]);
-  return { ...mapRestaurant(restaurantRow as RestaurantRow, businessHours), bannerLinkProductId };
+  return { ...mapRestaurant(restaurantRow as RestaurantRow, businessHours), bannerLinkProductId, freeShippingThreshold };
 }
 
 export async function getAdminRestaurant() {
@@ -204,11 +249,12 @@ export async function getAdminRestaurant() {
     .single();
 
   if (restaurantError || !restaurantRow) return null;
-  const [businessHours, bannerLinkProductId] = await Promise.all([
+  const [businessHours, bannerLinkProductId, freeShippingThreshold] = await Promise.all([
     getBusinessHours(restaurantId),
-    getBannerLinkProductId(restaurantId)
+    getBannerLinkProductId(restaurantId),
+    getFreeShippingThreshold(restaurantId)
   ]);
-  return { ...mapRestaurant(restaurantRow as RestaurantRow, businessHours), bannerLinkProductId };
+  return { ...mapRestaurant(restaurantRow as RestaurantRow, businessHours), bannerLinkProductId, freeShippingThreshold };
 }
 
 export async function saveRestaurantToSupabase(restaurant: Restaurant) {

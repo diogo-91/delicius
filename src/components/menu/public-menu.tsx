@@ -224,6 +224,36 @@ function OrderTimeline({ order }: { order: Order }) {
   );
 }
 
+function FreeShippingProgress({ subtotal, threshold }: { subtotal: number; threshold: number }) {
+  const remaining = Math.max(threshold - subtotal, 0);
+  const progress = Math.min((subtotal / threshold) * 100, 100);
+  const unlocked = remaining <= 0;
+
+  return (
+    <div className={`rounded-xl border p-3.5 ${unlocked ? "border-success-100 bg-success-50" : "border-line bg-white/70"}`}>
+      <p className={`flex flex-wrap items-center gap-1.5 text-sm font-semibold ${unlocked ? "text-success-700" : "text-ink"}`}>
+        {unlocked ? (
+          <>
+            <PackageCheck className="h-4 w-4 shrink-0" />
+            Você ganhou frete grátis nesta compra!
+          </>
+        ) : (
+          <>
+            <Truck className="h-4 w-4 shrink-0 text-brand-600" />
+            Faltam <span className="text-brand-700">{formatCurrency(remaining)}</span> para o frete grátis
+          </>
+        )}
+      </p>
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${unlocked ? "bg-success-500" : "bg-brand-500"}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   const menuSlug = slug;
   const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -661,8 +691,20 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     };
   }, [type, addressMode, deliveryAddress.street, deliveryAddress.number, deliveryAddress.neighborhood]);
 
+  const freeShippingThreshold =
+    typeof restaurant.freeShippingThreshold === "number" && restaurant.freeShippingThreshold > 0
+      ? restaurant.freeShippingThreshold
+      : null;
+  const freeShippingUnlocked = freeShippingThreshold != null && subtotal >= freeShippingThreshold;
+
   const deliveryFee =
-    type === "delivery" ? (deliveryQuote.status === "ok" && deliveryQuote.fee != null ? deliveryQuote.fee : restaurant.deliveryFee) : 0;
+    type === "delivery"
+      ? freeShippingUnlocked
+        ? 0
+        : deliveryQuote.status === "ok" && deliveryQuote.fee != null
+          ? deliveryQuote.fee
+          : restaurant.deliveryFee
+      : 0;
   const discount = useMemo(() => {
     if (!appliedCoupon) return 0;
     if (appliedCoupon.type === "percent") return Math.min(subtotal * (appliedCoupon.value / 100), subtotal + deliveryFee);
@@ -1191,6 +1233,9 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   ) : (
     <div className="grid gap-5 p-5 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="space-y-3">
+        {type === "delivery" && freeShippingThreshold != null && (
+          <FreeShippingProgress subtotal={subtotal} threshold={freeShippingThreshold} />
+        )}
         {cart.length === 0 && (
           <div className="rounded-xl bg-white/70 p-5 text-center text-sm text-muted ring-1 ring-line/70">
             Sua sacola ainda está vazia. Escolha um item do cardápio para continuar.
@@ -1418,6 +1463,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               <span>
                 {deliveryQuote.status === "loading" ? (
                   <span className="text-xs">calculando frete...</span>
+                ) : freeShippingUnlocked ? (
+                  <span className="font-semibold text-success-600">Grátis</span>
                 ) : (
                   formatCurrency(deliveryFee)
                 )}
@@ -1455,6 +1502,14 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
   return (
     <main className="min-h-screen bg-[#f7f2ed] pb-24 text-ink md:bg-[#f5f6f8] xl:pb-12">
+      {freeShippingThreshold != null && (
+        <div className="bg-success-600 text-white">
+          <div className="mx-auto flex w-full max-w-[1500px] items-center justify-center gap-1.5 px-4 py-2 text-center text-xs font-semibold xl:w-[80%]">
+            <Truck className="h-3.5 w-3.5 shrink-0" />
+            Frete grátis em pedidos de entrega acima de {formatCurrency(freeShippingThreshold)}
+          </div>
+        </div>
+      )}
       <div className="hidden bg-ink2 md:block">
         <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-2 text-[11px] font-medium text-white/90 xl:w-[80%]">
           <div className="flex items-center gap-6">

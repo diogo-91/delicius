@@ -30,6 +30,7 @@ export type Restaurant = {
   openingHours: string;
   weeklySchedule?: WeekdaySchedule[];
   deliveryFee: number;
+  freeShippingThreshold?: number;
   averagePrepTime: number;
   isOpen: boolean;
   whatsapp: string;

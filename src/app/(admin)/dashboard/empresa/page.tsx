@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, ImagePlus, Pencil, Save, Trash2 } from "lucide-react";
+import { Clock, ImagePlus, Pencil, Save, Trash2, Truck } from "lucide-react";
 import { getProducts, getRestaurant, saveRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
-import { defaultWeeklySchedule, formatScheduleSummary, getAdminRestaurant, isSupabaseConfigured, saveRestaurantBannerLinkProductId, saveRestaurantBannerUrl, saveRestaurantToSupabase } from "@/lib/data/supabase-restaurant";
+import { defaultWeeklySchedule, formatScheduleSummary, getAdminRestaurant, isSupabaseConfigured, saveRestaurantBannerLinkProductId, saveRestaurantBannerUrl, saveRestaurantFreeShippingThreshold, saveRestaurantToSupabase } from "@/lib/data/supabase-restaurant";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, Restaurant, WeekdaySchedule } from "@/types/domain";
@@ -34,6 +34,7 @@ export default function CompanyPage() {
   const [bannerLinkSaving, setBannerLinkSaving] = useState(false);
 
   const schedule = form.weeklySchedule ?? defaultWeeklySchedule;
+  const freeShippingEnabled = Boolean(form.freeShippingThreshold);
 
   useEffect(() => {
     let ignore = false;
@@ -194,10 +195,24 @@ export default function CompanyPage() {
         openingHours: formatScheduleSummary(schedule)
       };
       const saved = await saveRestaurantToSupabase(nextRestaurant);
-      saveRestaurant(saved);
-      setForm(saved);
+
+      // Fora do RPC principal de propósito (ver supabase-restaurant.ts), então
+      // uma migração pendente nunca impede salvar o resto das configurações.
+      const freeShippingThreshold = freeShippingEnabled ? Number(form.freeShippingThreshold) || undefined : undefined;
+      let freeShippingWarning = "";
+      try {
+        await saveRestaurantFreeShippingThreshold(saved.id, freeShippingThreshold);
+      } catch (freeShippingError) {
+        freeShippingWarning = freeShippingError instanceof Error
+          ? ` O frete grátis não foi salvo: ${freeShippingError.message}`
+          : " O frete grátis não foi salvo.";
+      }
+
+      const mergedRestaurant = { ...saved, freeShippingThreshold };
+      saveRestaurant(mergedRestaurant);
+      setForm(mergedRestaurant);
       setHeroPreviewUrl(null);
-      setMessage("Configurações salvas no Supabase. O cardápio público já usa estes horários.");
+      setMessage(`Configurações salvas no Supabase. O cardápio público já usa estes horários.${freeShippingWarning}`);
     } catch (error) {
       setMessage(error instanceof Error ? `Falha ao salvar no Supabase: ${error.message}` : "Falha ao salvar no Supabase.");
     } finally {
@@ -227,6 +242,44 @@ export default function CompanyPage() {
             <AdminInput value={form.whatsapp} placeholder="WhatsApp" onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} />
             <AdminInput value={form.deliveryFee} type="number" placeholder="Taxa de entrega" onChange={(event) => setForm({ ...form, deliveryFee: Number(event.target.value) })} />
             <AdminInput value={form.averagePrepTime} type="number" placeholder="Tempo médio de preparo" onChange={(event) => setForm({ ...form, averagePrepTime: Number(event.target.value) })} />
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 md:col-span-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Truck className="h-4 w-4 text-brand-600" />
+                    Frete grátis
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">Libere a entrega gratuita para pedidos acima de um valor mínimo. O cliente acompanha o progresso no carrinho.</p>
+                </div>
+                <label className="flex shrink-0 items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand-600"
+                    checked={freeShippingEnabled}
+                    onChange={(event) =>
+                      setForm({ ...form, freeShippingThreshold: event.target.checked ? form.freeShippingThreshold || 100 : undefined })
+                    }
+                  />
+                  Ativar
+                </label>
+              </div>
+              {freeShippingEnabled && (
+                <div className="mt-4">
+                  <AdminInput
+                    value={form.freeShippingThreshold ?? ""}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Valor mínimo do pedido (R$)"
+                    onChange={(event) => setForm({ ...form, freeShippingThreshold: Number(event.target.value) || 0 })}
+                  />
+                  <p className="mt-2 text-xs text-slate-500">
+                    Pedidos de entrega a partir de <strong className="text-slate-700">{formatCurrency(Number(form.freeShippingThreshold) || 0)}</strong> não pagam taxa de entrega.
+                  </p>
+                </div>
+              )}
+            </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 md:col-span-2">
               <div>
@@ -359,6 +412,9 @@ export default function CompanyPage() {
           <div className="mt-4 space-y-2 text-sm text-slate-700">
             <p>Taxa: <strong className="text-slate-900">{formatCurrency(Number(form.deliveryFee) || 0)}</strong></p>
             <p>Preparo: <strong className="text-slate-900">{form.averagePrepTime} min</strong></p>
+            {freeShippingEnabled && (
+              <p>Frete grátis: <strong className="text-slate-900">acima de {formatCurrency(Number(form.freeShippingThreshold) || 0)}</strong></p>
+            )}
             <p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">{formatScheduleSummary(schedule)}</p>
             <AdminBadge tone={form.isOpen ? "success" : "error"}>{form.isOpen ? "Aberto manualmente" : "Fechado manualmente"}</AdminBadge>
           </div>

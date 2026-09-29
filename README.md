@@ -65,3 +65,7 @@ NEXT_PUBLIC_APP_URL=https://dgourmet.com.br
 Cadastre no Asaas o webhook `https://dgourmet.com.br/api/webhooks/asaas` com o mesmo `ASAAS_WEBHOOK_TOKEN`. Ative os eventos `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED` e `PAYMENT_DELETED` somente depois do deploy.
 
 O cartao de debito permanece visivel como indisponivel porque a API publica do Asaas nao permite captura transparente dessa modalidade. Nunca adicione chaves do Asaas a variaveis `NEXT_PUBLIC_*`.
+
+## Frete gratis
+
+Em Empresa > Frete gratis, defina um valor minimo de pedido para liberar a entrega gratuita. O cliente ve o progresso (quanto falta) direto na sacola do cardapio publico. Antes de usar, aplique no Supabase a migracao `supabase/migrations/015_restaurant_free_shipping.sql` — sem ela a opcao fica invisivel no painel e o restante das configuracoes continua salvando normalmente.
