@@ -2072,7 +2072,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
       {mobileCustomerOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-navy-900/50 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
-          <div className="max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-white/70 bg-white p-4 shadow-panel">
+          <div className="max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-white/70 bg-white p-4 shadow-panel sm:max-w-sm">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold text-ink">Área do cliente</h2>
               <button className="rounded-lg p-2 text-muted hover:bg-slate-100" onClick={() => setMobileCustomerOpen(false)} type="button">
