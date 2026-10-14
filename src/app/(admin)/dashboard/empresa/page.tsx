@@ -287,7 +287,7 @@ export default function CompanyPage() {
                   <ImagePlus className="h-4 w-4 text-brand-600" />
                   Imagem do hero
                 </h3>
-                <p className="mt-1 text-xs text-slate-500">Banner exibido no topo do cardápio público. A alteração é publicada automaticamente. Recomendado: proporção 5:1, até 5 MB.</p>
+                <p className="mt-1 text-xs text-slate-500">Banner exibido no topo do cardápio público. A alteração é publicada automaticamente. Recomendado: 1920 × 384 px (proporção 5:1), até 5 MB. A imagem é exibida por inteiro, sem cortes.</p>
               </div>
 
               <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -295,7 +295,7 @@ export default function CompanyPage() {
                   <img
                     src={heroPreviewUrl ?? form.bannerUrl}
                     alt="Pré-visualização do hero"
-                    className="aspect-[5/1] w-full object-cover"
+                    className="block h-auto w-full"
                   />
                 ) : (
                   <div className="flex aspect-[5/1] min-h-28 items-center justify-center gap-2 text-sm text-slate-400">

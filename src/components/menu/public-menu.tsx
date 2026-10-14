@@ -1655,14 +1655,14 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               <img
                 src={restaurant.bannerUrl}
                 alt={`Banner de ${restaurant.name} — toque para ver ${bannerLinkProduct.name}`}
-                className="aspect-[5/1] w-full bg-slate-100 object-cover"
+                className="block h-auto w-full bg-slate-100"
               />
             </button>
           ) : (
             <img
               src={restaurant.bannerUrl}
               alt={`Banner de ${restaurant.name}`}
-              className="aspect-[5/1] w-full bg-slate-100 object-cover"
+              className="block h-auto w-full bg-slate-100"
             />
           )}
         </section>
