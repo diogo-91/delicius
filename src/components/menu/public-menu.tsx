@@ -1558,7 +1558,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   return (
     <main className="min-h-screen bg-[#f7f2ed] pb-24 text-ink md:bg-[#f5f6f8] xl:pb-12">
       {freeShippingThreshold != null && (
-        <div className="bg-success-600 text-white">
+        <div className="bg-cta text-white">
           <div className="mx-auto flex w-full max-w-[1500px] items-center justify-center gap-1.5 px-4 py-2 text-center text-xs font-semibold xl:w-[80%]">
             <Truck className="h-3.5 w-3.5 shrink-0" />
             Frete grátis em pedidos de entrega acima de {formatCurrency(freeShippingThreshold)}
