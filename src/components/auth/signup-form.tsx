@@ -1,5 +1,6 @@
 "use client";
 
+import { maskPhone } from "@/lib/masks";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -85,7 +86,7 @@ export function SignupForm() {
       <Input placeholder="Nome do restaurante" value={form.restaurantName} onChange={(event) => setForm({ ...form, restaurantName: event.target.value })} required />
       <Input className="sm:col-span-2" type="email" placeholder="email@restaurante.com" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
       <Input type="password" placeholder="Senha" minLength={6} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
-      <Input placeholder="WhatsApp" value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} />
+      <Input type="tel" inputMode="tel" maxLength={15} placeholder="WhatsApp" value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: maskPhone(event.target.value) })} />
       <Button className="sm:col-span-2" disabled={loading} type="submit">
         {loading ? "Criando..." : "Cadastrar"}
       </Button>

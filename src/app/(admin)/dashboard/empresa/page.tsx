@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalNumberKeyDown, integerNumberKeyDown, onlyDigits } from "@/lib/masks";
 import { useEffect, useState } from "react";
 import { Clock, ImagePlus, Pencil, Save, Trash2, Truck } from "lucide-react";
 import { getProducts, getRestaurant, saveRestaurant } from "@/lib/data/mock-store";
@@ -239,9 +240,9 @@ export default function CompanyPage() {
             <AdminInput value={form.name} placeholder="Nome do restaurante" onChange={(event) => setForm({ ...form, name: event.target.value })} />
             <AdminInput value={form.slug} placeholder="URL única" onChange={(event) => setForm({ ...form, slug: event.target.value })} />
             <AdminInput className="md:col-span-2" value={form.address} placeholder="Endereço" onChange={(event) => setForm({ ...form, address: event.target.value })} />
-            <AdminInput value={form.whatsapp} placeholder="WhatsApp" onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} />
-            <AdminInput value={form.deliveryFee} type="number" placeholder="Taxa de entrega" onChange={(event) => setForm({ ...form, deliveryFee: Number(event.target.value) })} />
-            <AdminInput value={form.averagePrepTime} type="number" placeholder="Tempo médio de preparo" onChange={(event) => setForm({ ...form, averagePrepTime: Number(event.target.value) })} />
+            <AdminInput value={form.whatsapp} inputMode="numeric" maxLength={13} placeholder="WhatsApp com DDI e DDD (ex: 5515999999999)" onChange={(event) => setForm({ ...form, whatsapp: onlyDigits(event.target.value, 13) })} />
+            <AdminInput value={form.deliveryFee} type="number" min="0" step="0.01" inputMode="decimal" onKeyDown={decimalNumberKeyDown} placeholder="Taxa de entrega" onChange={(event) => setForm({ ...form, deliveryFee: Number(event.target.value) })} />
+            <AdminInput value={form.averagePrepTime} type="number" min="0" step="1" inputMode="numeric" onKeyDown={integerNumberKeyDown} placeholder="Tempo médio de preparo" onChange={(event) => setForm({ ...form, averagePrepTime: Number(event.target.value) })} />
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 md:col-span-2">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -271,6 +272,8 @@ export default function CompanyPage() {
                     type="number"
                     min="0"
                     step="0.01"
+                    inputMode="decimal"
+                    onKeyDown={decimalNumberKeyDown}
                     placeholder="Valor mínimo do pedido (R$)"
                     onChange={(event) => setForm({ ...form, freeShippingThreshold: Number(event.target.value) || 0 })}
                   />

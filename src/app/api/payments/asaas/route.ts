@@ -123,9 +123,17 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: auth } = await supabase.auth.getUser();
+    // Compra somente com conta logada (usuário anônimo/convidado não vale).
+    if (!auth.user || auth.user.is_anonymous) {
+      return NextResponse.json({ error: "Faça login ou crie sua conta para finalizar o pedido." }, { status: 401 });
+    }
     const body = (await request.json()) as PaymentBody;
     if (!body.order?.items?.length || !["pix", "credit_card"].includes(body.order.paymentMethod)) {
       return NextResponse.json({ error: "Dados do pagamento inválidos." }, { status: 400 });
+    }
+    const phoneDigits = digits(body.order.customer?.phone ?? "");
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      return NextResponse.json({ error: "Informe um telefone válido com DDD." }, { status: 400 });
     }
 
     const cpfCnpj = digits(body.card?.cpfCnpj ?? body.cpfCnpj);

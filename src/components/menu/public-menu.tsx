@@ -7,6 +7,7 @@ import { STORE_UPDATED_EVENT, buildOrder, getCategories, getCoupons, getOrders, 
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
 import { getMyRemoteOrders } from "@/lib/data/supabase-orders";
 import { getRemoteCustomerProfile, saveRemoteCustomerProfile } from "@/lib/data/supabase-customer-profile";
+import { maskCardNumber, maskCep, maskCpfCnpj, maskExpiry, maskPhone, onlyDigits } from "@/lib/masks";
 import { getPublicRestaurantBySlug } from "@/lib/data/supabase-restaurant";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatCurrency, formatScheduledFor } from "@/lib/utils";
@@ -261,6 +262,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   const [categories, setCategories] = useState<Category[]>(() => (supabaseConfigured ? [] : getCategories()));
   const [products, setProducts] = useState<Product[]>(() => (supabaseConfigured ? [] : getProducts().filter((product) => product.active)));
   const [menuLoading, setMenuLoading] = useState(supabaseConfigured);
+  // Evita o "flash" do banner antigo (seed/localStorage) antes dos dados reais chegarem.
+  const [remoteRestaurantLoaded, setRemoteRestaurantLoaded] = useState(!supabaseConfigured);
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
@@ -410,7 +413,10 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           setProducts(snapshot.products.filter((product) => product.active));
         }
       } finally {
-        if (!ignore) setMenuLoading(false);
+        if (!ignore) {
+          setMenuLoading(false);
+          setRemoteRestaurantLoaded(true);
+        }
       }
     }
 
@@ -519,7 +525,10 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (event === "SIGNED_OUT") resetCustomerSession();
+    });
 
     return () => data.subscription.unsubscribe();
   }, [supabaseConfigured]);
@@ -712,7 +721,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     return Math.min(deliveryFee, subtotal + deliveryFee);
   }, [appliedCoupon, deliveryFee, subtotal]);
   const total = Math.max(subtotal + deliveryFee - discount, 0);
-  const customerIsAuthenticated = Boolean(user || localCustomerSession);
+  // Usuario anonimo do Supabase (login de convidado) NAO conta como conta logada.
+  const customerIsAuthenticated = Boolean((user && !user.is_anonymous) || (!supabaseConfigured && localCustomerSession));
   const customerHistory = customerIsAuthenticated ? ordersSnapshot.slice(0, 3) : [];
   const displayName = useMemo(() => restaurant.name.replace(/\s*BOLOS E SALGADOS\s*/i, "").trim(), [restaurant.name]);
   const openingHours = useMemo(() => getOpeningHoursSummary(restaurant.weeklySchedule ?? defaultWeeklySchedule), [restaurant.weeklySchedule]);
@@ -799,8 +809,19 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     const customerPhone = checkoutCustomer.phone || customer.phone;
 
     if (items.length === 0) return;
-    if (!customerName.trim() || customerPhone.replace(/\D/g, "").length < 10) {
-      setPaymentMessage("Informe seu nome e telefone antes de continuar.");
+    if (!customerIsAuthenticated) {
+      setPaymentMessage("Entre na sua conta ou cadastre-se para finalizar o pedido.");
+      setAuthMessage("Faça login ou crie sua conta para finalizar o pedido.");
+      setAuthModalOpen(true);
+      return;
+    }
+    const phoneDigits = onlyDigits(customerPhone);
+    if (!customerName.trim() || phoneDigits.length < 10 || phoneDigits.length > 11) {
+      setPaymentMessage("Informe seu nome e um telefone válido com DDD (somente números).");
+      return;
+    }
+    if (type === "delivery" && addressMode === "other" && (!customer.street.trim() || !customer.neighborhood.trim())) {
+      setPaymentMessage("Informe rua e bairro para entrega.");
       return;
     }
     if (type === "delivery" && addressMode === "saved" && !formatCustomerAddress(customerProfile)) {
@@ -809,13 +830,30 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     }
     const payerCpf = paymentMethod === "credit_card" ? cardForm.cpf : payerForm.cpfCnpj;
     const payerEmail = paymentMethod === "credit_card" ? cardForm.email : payerForm.email;
-    if (![11, 14].includes(payerCpf.replace(/\D/g, "").length) || !payerEmail.includes("@")) {
-      setPaymentMessage("Informe um CPF/CNPJ e um e-mail validos para o pagamento.");
+    if (![11, 14].includes(onlyDigits(payerCpf).length) || !/^\S+@\S+\.\S+$/.test(payerEmail.trim())) {
+      setPaymentMessage("Informe um CPF/CNPJ (somente números) e um e-mail válido para o pagamento.");
       return;
     }
-    if (paymentMethod === "credit_card" && (!cardForm.holder || !cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.postalCode || !cardForm.addressNumber)) {
-      setPaymentMessage("Preencha todos os dados do cartão e do titular.");
-      return;
+    if (paymentMethod === "credit_card") {
+      const cardDigits = onlyDigits(cardForm.number);
+      const expiryDigits = onlyDigits(cardForm.expiry);
+      const expiryMonth = Number(expiryDigits.slice(0, 2));
+      if (!cardForm.holder.trim() || cardDigits.length < 13 || cardDigits.length > 19) {
+        setPaymentMessage("Informe o nome impresso e um número de cartão válido.");
+        return;
+      }
+      if (expiryDigits.length !== 4 || expiryMonth < 1 || expiryMonth > 12) {
+        setPaymentMessage("Informe a validade do cartão no formato MM/AA.");
+        return;
+      }
+      if (onlyDigits(cardForm.cvv).length < 3) {
+        setPaymentMessage("Informe o CVV do cartão (3 ou 4 números).");
+        return;
+      }
+      if (onlyDigits(cardForm.postalCode).length !== 8 || !onlyDigits(cardForm.addressNumber)) {
+        setPaymentMessage("Informe o CEP (8 números) e o número do endereço do titular.");
+        return;
+      }
     }
 
     const address =
@@ -841,14 +879,6 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     });
     setPaymentStatus("processing");
     setPaymentMessage("Conectando ao Asaas...");
-    if (wasGuest && supabaseConfigured) {
-      try {
-        const supabase = createSupabaseBrowserClient();
-        await supabase.auth.signInAnonymously();
-      } catch {
-        // Pagamento como convidado continua disponível mesmo sem login anônimo no Supabase.
-      }
-    }
 
     try {
       const response = await fetch("/api/payments/asaas", {
@@ -924,6 +954,30 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     });
   }
 
+  // Limpa tudo que pertence ao cliente da sessao (carrinho, cupom, pagamento
+  // pendente e dados pessoais) para nao vazar para o proximo visitante.
+  function resetCustomerSession() {
+    setCart([]);
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponMessage("");
+    setCartModalOpen(false);
+    setCreatedOrder(null);
+    setPaymentStatus("idle");
+    setPaymentMessage("");
+    setPaymentSessionId(null);
+    setPendingOrder(null);
+    setPixPayment(null);
+    setPayerForm({ cpfCnpj: "", email: "" });
+    setCardForm({ holder: "", number: "", expiry: "", cvv: "", cpf: "", email: "", postalCode: "", addressNumber: "" });
+    setCustomerProfile(defaultCustomer);
+    setCustomer(defaultCustomer);
+    setOrdersSnapshot([]);
+    window.localStorage.removeItem(pendingPaymentStorageKey);
+    window.localStorage.removeItem(customerProfileStorageKey);
+    window.localStorage.removeItem(cartStorageKey);
+  }
+
   async function signOut() {
     if (supabaseConfigured) {
       const supabase = createSupabaseBrowserClient();
@@ -931,6 +985,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     }
     setUser(null);
     setLocalCustomerSession(false);
+    resetCustomerSession();
   }
 
   async function saveCustomerProfile() {
@@ -1295,7 +1350,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
       <div className="space-y-3 border-t border-line pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
         <Input placeholder="Nome completo" value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} />
-        <Input placeholder="Telefone/WhatsApp" value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: event.target.value })} />
+        <Input type="tel" inputMode="tel" maxLength={15} placeholder="Telefone/WhatsApp" value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: maskPhone(event.target.value) })} />
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Como deseja receber?</p>
           <div className="grid grid-cols-2 gap-2">
@@ -1345,7 +1400,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             {addressMode === "other" && (
               <div className="grid gap-3 sm:grid-cols-[1fr_96px]">
                 <Input className="bg-white" placeholder="Rua / Avenida" value={customer.street} onChange={(event) => setCustomer({ ...customer, street: event.target.value })} />
-                <Input className="bg-white" placeholder="Número" value={customer.number} onChange={(event) => setCustomer({ ...customer, number: event.target.value })} />
+                <Input className="bg-white" inputMode="numeric" maxLength={6} placeholder="Número" value={customer.number} onChange={(event) => setCustomer({ ...customer, number: onlyDigits(event.target.value, 6) })} />
                 <Input className="bg-white sm:col-span-2" placeholder="Bairro" value={customer.neighborhood} onChange={(event) => setCustomer({ ...customer, neighborhood: event.target.value })} />
                 <Input className="bg-white sm:col-span-2" placeholder="Complemento (apto, bloco, casa)" value={customer.complement} onChange={(event) => setCustomer({ ...customer, complement: event.target.value })} />
                 <Textarea className="min-h-20 bg-white sm:col-span-2" placeholder="Ponto de referência ou observação da entrega" value={customer.reference} onChange={(event) => setCustomer({ ...customer, reference: event.target.value })} />
@@ -1403,7 +1458,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           <div className="rounded-xl border border-brand-100 bg-brand-50 p-3">
             {!pixPayment ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                <Input className="bg-white" placeholder="CPF ou CNPJ" value={payerForm.cpfCnpj} onChange={(event) => setPayerForm({ ...payerForm, cpfCnpj: event.target.value })} />
+                <Input className="bg-white" inputMode="numeric" maxLength={18} placeholder="CPF ou CNPJ" value={payerForm.cpfCnpj} onChange={(event) => setPayerForm({ ...payerForm, cpfCnpj: maskCpfCnpj(event.target.value) })} />
                 <Input className="bg-white" type="email" placeholder="E-mail" value={payerForm.email} onChange={(event) => setPayerForm({ ...payerForm, email: event.target.value })} />
                 <p className="text-xs text-muted sm:col-span-2">O QR Code real será gerado pelo Asaas ao finalizar.</p>
               </div>
@@ -1423,13 +1478,13 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         ) : (
           <div className="grid gap-3 rounded-xl border border-line bg-white/60 p-3 sm:grid-cols-2">
             <Input className="bg-white sm:col-span-2" placeholder="Nome impresso no cartão" value={cardForm.holder} onChange={(event) => setCardForm({ ...cardForm, holder: event.target.value })} />
-            <Input className="bg-white sm:col-span-2" placeholder="Número do cartão" value={cardForm.number} onChange={(event) => setCardForm({ ...cardForm, number: event.target.value })} />
-            <Input className="bg-white" placeholder="Validade MM/AA" value={cardForm.expiry} onChange={(event) => setCardForm({ ...cardForm, expiry: event.target.value })} />
-            <Input className="bg-white" placeholder="CVV" value={cardForm.cvv} onChange={(event) => setCardForm({ ...cardForm, cvv: event.target.value })} />
-            <Input className="bg-white" placeholder="CPF/CNPJ do titular" value={cardForm.cpf} onChange={(event) => setCardForm({ ...cardForm, cpf: event.target.value })} />
+            <Input className="bg-white sm:col-span-2" inputMode="numeric" autoComplete="cc-number" maxLength={23} placeholder="Número do cartão" value={cardForm.number} onChange={(event) => setCardForm({ ...cardForm, number: maskCardNumber(event.target.value) })} />
+            <Input className="bg-white" inputMode="numeric" autoComplete="cc-exp" maxLength={5} placeholder="Validade MM/AA" value={cardForm.expiry} onChange={(event) => setCardForm({ ...cardForm, expiry: maskExpiry(event.target.value) })} />
+            <Input className="bg-white" inputMode="numeric" autoComplete="cc-csc" maxLength={4} placeholder="CVV" value={cardForm.cvv} onChange={(event) => setCardForm({ ...cardForm, cvv: onlyDigits(event.target.value, 4) })} />
+            <Input className="bg-white" inputMode="numeric" maxLength={18} placeholder="CPF/CNPJ do titular" value={cardForm.cpf} onChange={(event) => setCardForm({ ...cardForm, cpf: maskCpfCnpj(event.target.value) })} />
             <Input className="bg-white" type="email" placeholder="E-mail do titular" value={cardForm.email} onChange={(event) => setCardForm({ ...cardForm, email: event.target.value })} />
-            <Input className="bg-white" placeholder="CEP" value={cardForm.postalCode} onChange={(event) => setCardForm({ ...cardForm, postalCode: event.target.value })} />
-            <Input className="bg-white" placeholder="Número do endereço" value={cardForm.addressNumber} onChange={(event) => setCardForm({ ...cardForm, addressNumber: event.target.value })} />
+            <Input className="bg-white" inputMode="numeric" maxLength={9} placeholder="CEP" value={cardForm.postalCode} onChange={(event) => setCardForm({ ...cardForm, postalCode: maskCep(event.target.value) })} />
+            <Input className="bg-white" inputMode="numeric" maxLength={6} placeholder="Número do endereço" value={cardForm.addressNumber} onChange={(event) => setCardForm({ ...cardForm, addressNumber: onlyDigits(event.target.value, 6) })} />
             <p className="text-xs text-muted sm:col-span-2">Se o cartão ainda não estiver habilitado na conta Asaas, o pagamento será recusado sem criar o pedido.</p>
           </div>
         )}
@@ -1489,7 +1544,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         {storeAcceptingOrders ? (
           <Button variant="success" className="h-12 w-full rounded-xl" disabled={cart.length === 0 || paymentStatus === "processing" || paymentStatus === "pending"} onClick={finishOrder} type="button">
             {paymentStatus === "processing" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-            {paymentStatus === "pending" ? "AGUARDANDO PAGAMENTO" : `PAGAR • ${formatCurrency(total)}`}
+            {paymentStatus === "pending" ? "AGUARDANDO PAGAMENTO" : !customerIsAuthenticated ? "ENTRAR PARA FINALIZAR O PEDIDO" : `PAGAR • ${formatCurrency(total)}`}
           </Button>
         ) : (
           <Button variant="success" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={() => setSlotPickerOpen(true)} type="button">
@@ -1643,7 +1698,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         </div>
       </header>
 
-      {restaurant.bannerUrl && (
+      {restaurant.bannerUrl && remoteRestaurantLoaded && (
         <section className="w-full">
           {bannerLinkProduct ? (
             <button
@@ -2093,10 +2148,10 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
                   {profileEditing ? (
                     <div className="mt-3 space-y-2">
                       <Input placeholder="Nome completo" value={customerProfile.name} onChange={(event) => updateCustomerProfile({ ...customerProfile, name: event.target.value })} />
-                      <Input placeholder="Telefone/WhatsApp" value={customerProfile.phone} onChange={(event) => updateCustomerProfile({ ...customerProfile, phone: event.target.value })} />
+                      <Input type="tel" inputMode="tel" maxLength={15} placeholder="Telefone/WhatsApp" value={customerProfile.phone} onChange={(event) => updateCustomerProfile({ ...customerProfile, phone: maskPhone(event.target.value) })} />
                       <div className="grid grid-cols-[minmax(0,1fr)_80px] gap-2">
                         <Input placeholder="Rua / Avenida" value={customerProfile.street} onChange={(event) => updateCustomerProfile({ ...customerProfile, street: event.target.value })} />
-                        <Input placeholder="Nº" value={customerProfile.number} onChange={(event) => updateCustomerProfile({ ...customerProfile, number: event.target.value })} />
+                        <Input inputMode="numeric" maxLength={6} placeholder="Nº" value={customerProfile.number} onChange={(event) => updateCustomerProfile({ ...customerProfile, number: onlyDigits(event.target.value, 6) })} />
                       </div>
                       <Input placeholder="Bairro" value={customerProfile.neighborhood} onChange={(event) => updateCustomerProfile({ ...customerProfile, neighborhood: event.target.value })} />
                       <Input placeholder="Complemento" value={customerProfile.complement} onChange={(event) => updateCustomerProfile({ ...customerProfile, complement: event.target.value })} />
@@ -2309,7 +2364,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
                 <div className="space-y-3 rounded-xl border border-line bg-slate-50 p-3">
                   <Input placeholder="Nome completo" value={signupForm.name} onChange={(event) => setSignupForm({ ...signupForm, name: event.target.value })} />
                   <Input placeholder="E-mail" type="email" value={signupForm.email} onChange={(event) => setSignupForm({ ...signupForm, email: event.target.value })} />
-                  <Input placeholder="Telefone/WhatsApp" value={signupForm.phone} onChange={(event) => setSignupForm({ ...signupForm, phone: event.target.value })} />
+                  <Input type="tel" inputMode="tel" maxLength={15} placeholder="Telefone/WhatsApp" value={signupForm.phone} onChange={(event) => setSignupForm({ ...signupForm, phone: maskPhone(event.target.value) })} />
                   <Input placeholder="Senha" type="password" value={signupForm.password} onChange={(event) => setSignupForm({ ...signupForm, password: event.target.value })} />
                   <Button className="w-full rounded-xl" onClick={createCustomerAccount} type="button">
                     Criar cadastro

@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, Check, ImagePlus, Pencil, Plus, RotateCcw, ToggleLe
 import { deleteProduct, getCategories, getProducts, saveCategories, saveCategory, saveProduct } from "@/lib/data/mock-store";
 import { getMenuSnapshot, saveMenuSnapshot } from "@/lib/data/supabase-menu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { decimalNumberKeyDown, integerNumberKeyDown } from "@/lib/masks";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { Category, Product } from "@/types/domain";
 import { AdminBadge } from "@/components/admin/ui/badge";
@@ -310,8 +311,8 @@ export function ProductManager() {
           <div className="mt-4 space-y-3">
             <AdminInput placeholder="Nome" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
             <AdminTextarea placeholder="Descrição" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-            <AdminInput placeholder="Preço" type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
-            <AdminInput placeholder="Quantidade disponível" type="number" min="0" value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} />
+            <AdminInput placeholder="Preço" type="number" min="0" step="0.01" inputMode="decimal" onKeyDown={decimalNumberKeyDown} value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
+            <AdminInput placeholder="Quantidade disponível" type="number" min="0" step="1" inputMode="numeric" onKeyDown={integerNumberKeyDown} value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} />
             <AdminSelect value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}>
               {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </AdminSelect>

@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalNumberKeyDown, integerNumberKeyDown } from "@/lib/masks";
 import { useEffect, useMemo, useState } from "react";
 import { Percent, Plus, ToggleLeft, ToggleRight, TicketPercent } from "lucide-react";
 import { getCoupons, getRestaurant, saveCoupon, toggleCoupon } from "@/lib/data/mock-store";
@@ -103,10 +104,10 @@ export function CouponManager() {
               <option value="delivery">Frete grátis</option>
             </AdminSelect>
             {form.type !== "delivery" && (
-              <AdminInput placeholder={form.type === "percent" ? "Percentual. Ex: 10" : "Valor em R$. Ex: 5"} type="number" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })} />
+              <AdminInput placeholder={form.type === "percent" ? "Percentual. Ex: 10" : "Valor em R$. Ex: 5"} type="number" min="0" step="0.01" inputMode="decimal" onKeyDown={decimalNumberKeyDown} value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })} />
             )}
-            <AdminInput placeholder="Pedido mínimo" type="number" value={form.minimumOrderValue} onChange={(event) => setForm({ ...form, minimumOrderValue: event.target.value })} />
-            <AdminInput placeholder="Limite de uso" type="number" value={form.usageLimit} onChange={(event) => setForm({ ...form, usageLimit: event.target.value })} />
+            <AdminInput placeholder="Pedido mínimo" type="number" min="0" step="0.01" inputMode="decimal" onKeyDown={decimalNumberKeyDown} value={form.minimumOrderValue} onChange={(event) => setForm({ ...form, minimumOrderValue: event.target.value })} />
+            <AdminInput placeholder="Limite de uso" type="number" min="0" step="1" inputMode="numeric" onKeyDown={integerNumberKeyDown} value={form.usageLimit} onChange={(event) => setForm({ ...form, usageLimit: event.target.value })} />
             <AdminInput placeholder="Validade" type="date" value={form.expiresAt} onChange={(event) => setForm({ ...form, expiresAt: event.target.value })} />
             <AdminButton className="w-full" onClick={createCoupon} type="button">
               <Plus className="h-4 w-4" />
