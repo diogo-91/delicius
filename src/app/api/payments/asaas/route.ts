@@ -24,6 +24,8 @@ type DeliveryAddress = {
   street?: string;
   number?: string;
   neighborhood?: string;
+  city?: string;
+  state?: string;
 };
 
 type PaymentBody = {
@@ -109,7 +111,9 @@ async function resolveDeliveryFee(order: Order, delivery: DeliveryAddress | unde
       const estimate = await estimateDelivery({
         street: delivery.street,
         number: delivery.number,
-        neighborhood: delivery.neighborhood
+        neighborhood: delivery.neighborhood,
+        city: delivery.city?.trim() || undefined,
+        state: delivery.state?.trim() || undefined
       });
       if (estimate.available) return estimate.fee;
     } catch {

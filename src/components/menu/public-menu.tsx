@@ -7,6 +7,7 @@ import { STORE_UPDATED_EVENT, buildOrder, getCategories, getCoupons, getOrders, 
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
 import { getMyRemoteOrders } from "@/lib/data/supabase-orders";
 import { getRemoteCustomerProfile, saveRemoteCustomerProfile } from "@/lib/data/supabase-customer-profile";
+import { CepInput } from "@/components/menu/cep-input";
 import { maskCardNumber, maskCep, maskCpfCnpj, maskExpiry, maskPhone, onlyDigits } from "@/lib/masks";
 import { getPublicRestaurantBySlug } from "@/lib/data/supabase-restaurant";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -49,9 +50,12 @@ const defaultWeeklySchedule: WeekdaySchedule[] = [
 const defaultCustomer = {
   name: "",
   phone: "",
+  cep: "",
   street: "",
   number: "",
   neighborhood: "",
+  city: "",
+  state: "",
   complement: "",
   reference: ""
 };
@@ -88,6 +92,8 @@ function formatCustomerAddress(customer: CustomerForm) {
   return [
     customer.street ? `${customer.street}${customer.number ? `, ${customer.number}` : ""}` : "",
     customer.neighborhood,
+    [customer.city, customer.state].filter(Boolean).join("/"),
+    customer.cep ? `CEP ${customer.cep}` : "",
     customer.complement ? `Compl.: ${customer.complement}` : "",
     customer.reference ? `Ref.: ${customer.reference}` : ""
   ]
@@ -667,6 +673,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     const street = deliveryAddress.street.trim();
     const neighborhood = deliveryAddress.neighborhood.trim();
     const number = deliveryAddress.number.trim();
+    const city = deliveryAddress.city.trim();
+    const state = deliveryAddress.state.trim();
     if (!street || !neighborhood) {
       setDeliveryQuote({ status: "idle", fee: null, km: null });
       return;
@@ -678,7 +686,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         const response = await fetch("/api/shipping/estimate", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ street, number, neighborhood })
+          body: JSON.stringify({ street, number, neighborhood, city, state })
         });
         const data = (await response.json()) as { configured?: boolean; available?: boolean; fee?: number; km?: number | null };
         if (cancelled) return;
@@ -698,7 +706,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [type, addressMode, deliveryAddress.street, deliveryAddress.number, deliveryAddress.neighborhood]);
+  }, [type, addressMode, deliveryAddress.street, deliveryAddress.number, deliveryAddress.neighborhood, deliveryAddress.city, deliveryAddress.state]);
 
   const freeShippingThreshold =
     typeof restaurant.freeShippingThreshold === "number" && restaurant.freeShippingThreshold > 0
@@ -824,6 +832,13 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       setPaymentMessage("Informe rua e bairro para entrega.");
       return;
     }
+    if (type === "delivery") {
+      const cepDigits = onlyDigits(checkoutCustomer.cep);
+      if (cepDigits.length > 0 && cepDigits.length !== 8) {
+        setPaymentMessage("Informe um CEP válido com 8 números.");
+        return;
+      }
+    }
     if (type === "delivery" && addressMode === "saved" && !formatCustomerAddress(customerProfile)) {
       setPaymentMessage("Cadastre um endereço na Área do cliente ou selecione outro endereço para entrega.");
       return;
@@ -890,7 +905,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           cpfCnpj: payerCpf,
           email: payerEmail,
           delivery: type === "delivery"
-            ? { street: checkoutCustomer.street, number: checkoutCustomer.number, neighborhood: checkoutCustomer.neighborhood }
+            ? { street: checkoutCustomer.street, number: checkoutCustomer.number, neighborhood: checkoutCustomer.neighborhood, city: checkoutCustomer.city, state: checkoutCustomer.state }
             : undefined,
           card: paymentMethod === "credit_card" ? {
             holderName: cardForm.holder,
@@ -1399,9 +1414,27 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             </button>
             {addressMode === "other" && (
               <div className="grid gap-3 sm:grid-cols-[1fr_96px]">
+                <CepInput
+                  className="sm:col-span-2"
+                  value={customer.cep}
+                  onChange={(cep) => setCustomer((current) => ({ ...current, cep }))}
+                  onResolved={(address) =>
+                    setCustomer((current) => ({
+                      ...current,
+                      street: address.street || current.street,
+                      neighborhood: address.neighborhood || current.neighborhood,
+                      city: address.city || current.city,
+                      state: address.state || current.state
+                    }))
+                  }
+                />
                 <Input className="bg-white" placeholder="Rua / Avenida" value={customer.street} onChange={(event) => setCustomer({ ...customer, street: event.target.value })} />
                 <Input className="bg-white" inputMode="numeric" maxLength={6} placeholder="Número" value={customer.number} onChange={(event) => setCustomer({ ...customer, number: onlyDigits(event.target.value, 6) })} />
                 <Input className="bg-white sm:col-span-2" placeholder="Bairro" value={customer.neighborhood} onChange={(event) => setCustomer({ ...customer, neighborhood: event.target.value })} />
+                <div className="grid grid-cols-[1fr_72px] gap-3 sm:col-span-2">
+                  <Input className="bg-white" placeholder="Cidade" value={customer.city} onChange={(event) => setCustomer({ ...customer, city: event.target.value })} />
+                  <Input className="bg-white uppercase" maxLength={2} placeholder="UF" value={customer.state} onChange={(event) => setCustomer({ ...customer, state: event.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase() })} />
+                </div>
                 <Input className="bg-white sm:col-span-2" placeholder="Complemento (apto, bloco, casa)" value={customer.complement} onChange={(event) => setCustomer({ ...customer, complement: event.target.value })} />
                 <Textarea className="min-h-20 bg-white sm:col-span-2" placeholder="Ponto de referência ou observação da entrega" value={customer.reference} onChange={(event) => setCustomer({ ...customer, reference: event.target.value })} />
               </div>
@@ -2149,11 +2182,28 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
                     <div className="mt-3 space-y-2">
                       <Input placeholder="Nome completo" value={customerProfile.name} onChange={(event) => updateCustomerProfile({ ...customerProfile, name: event.target.value })} />
                       <Input type="tel" inputMode="tel" maxLength={15} placeholder="Telefone/WhatsApp" value={customerProfile.phone} onChange={(event) => updateCustomerProfile({ ...customerProfile, phone: maskPhone(event.target.value) })} />
+                      <CepInput
+                        value={customerProfile.cep}
+                        onChange={(cep) => updateCustomerProfile({ ...customerProfile, cep })}
+                        onResolved={(address) =>
+                          setCustomerProfile((current) => ({
+                            ...current,
+                            street: address.street || current.street,
+                            neighborhood: address.neighborhood || current.neighborhood,
+                            city: address.city || current.city,
+                            state: address.state || current.state
+                          }))
+                        }
+                      />
                       <div className="grid grid-cols-[minmax(0,1fr)_80px] gap-2">
                         <Input placeholder="Rua / Avenida" value={customerProfile.street} onChange={(event) => updateCustomerProfile({ ...customerProfile, street: event.target.value })} />
                         <Input inputMode="numeric" maxLength={6} placeholder="Nº" value={customerProfile.number} onChange={(event) => updateCustomerProfile({ ...customerProfile, number: onlyDigits(event.target.value, 6) })} />
                       </div>
                       <Input placeholder="Bairro" value={customerProfile.neighborhood} onChange={(event) => updateCustomerProfile({ ...customerProfile, neighborhood: event.target.value })} />
+                      <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-2">
+                        <Input placeholder="Cidade" value={customerProfile.city} onChange={(event) => updateCustomerProfile({ ...customerProfile, city: event.target.value })} />
+                        <Input className="uppercase" maxLength={2} placeholder="UF" value={customerProfile.state} onChange={(event) => updateCustomerProfile({ ...customerProfile, state: event.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase() })} />
+                      </div>
                       <Input placeholder="Complemento" value={customerProfile.complement} onChange={(event) => updateCustomerProfile({ ...customerProfile, complement: event.target.value })} />
                       <Textarea className="min-h-16" placeholder="Ponto de referência ou observação" value={customerProfile.reference} onChange={(event) => updateCustomerProfile({ ...customerProfile, reference: event.target.value })} />
                       <Button className="h-11 w-full rounded-xl" onClick={saveCustomerProfile} type="button">
