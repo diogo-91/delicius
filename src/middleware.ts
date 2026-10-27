@@ -31,7 +31,10 @@ export async function middleware(request: NextRequest) {
       .maybeSingle();
 
     if (profile?.role === "cashier" && request.nextUrl.pathname !== "/dashboard/pedidos") {
-      return NextResponse.redirect(new URL("/dashboard/pedidos", request.url));
+      const ordersUrl = request.nextUrl.clone();
+      ordersUrl.pathname = "/dashboard/pedidos";
+      ordersUrl.search = "";
+      return NextResponse.redirect(ordersUrl);
     }
   }
 

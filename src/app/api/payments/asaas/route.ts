@@ -3,8 +3,7 @@ import { asaasRequest, digits } from "@/lib/asaas";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { estimateDelivery, isZlhubConfigured } from "@/lib/zlhub";
-import { coupons } from "@/lib/data/seed";
-import type { Order, Product } from "@/types/domain";
+import type { CouponType, Order, Product } from "@/types/domain";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -65,11 +64,34 @@ function calculateSubtotal(order: Order, products: Product[]) {
   return subtotal;
 }
 
-function applyTotals(order: Order, subtotal: number, deliveryFee: number) {
+type ValidCoupon = { type: CouponType; value: number; minimumOrderValue: number };
+
+// Cupom vem do banco (o mesmo que o painel cria e o cardápio exibe), nunca de
+// dados de exemplo. Só vale se estiver ativo, dentro da validade e com saldo de uso.
+async function findValidCoupon(admin: ReturnType<typeof createSupabaseAdminClient>, slug: string, code?: string): Promise<ValidCoupon | null> {
+  const normalized = code?.trim().toUpperCase();
+  if (!normalized) return null;
+
+  const { data: restaurantRow } = await admin.from("restaurants").select("id").eq("slug", slug).single();
+  if (!restaurantRow) return null;
+
+  const { data } = await admin
+    .from("coupons")
+    .select("type, value, active, usage_limit, used_count, minimum_order_value, expires_at")
+    .eq("restaurant_id", restaurantRow.id)
+    .eq("code", normalized)
+    .maybeSingle();
+  if (!data || !data.active) return null;
+  if (data.expires_at && new Date(data.expires_at) <= new Date()) return null;
+  if (data.usage_limit != null && (data.used_count ?? 0) >= data.usage_limit) return null;
+
+  return { type: data.type as CouponType, value: Number(data.value) || 0, minimumOrderValue: Number(data.minimum_order_value) || 0 };
+}
+
+function applyTotals(order: Order, subtotal: number, deliveryFee: number, coupon: ValidCoupon | null) {
   const fee = order.type === "delivery" ? deliveryFee : 0;
-  const coupon = coupons.find((candidate) => candidate.code === order.couponCode && candidate.active);
   let discount = 0;
-  if (coupon && subtotal + fee >= (coupon.minimumOrderValue ?? 0)) {
+  if (coupon && subtotal + fee >= coupon.minimumOrderValue) {
     discount = coupon.type === "percent" ? subtotal * (coupon.value / 100) : coupon.type === "fixed" ? coupon.value : fee;
   }
   const round = (value: number) => Math.round(value * 100) / 100;
@@ -160,7 +182,8 @@ export async function POST(request: NextRequest) {
       restaurantSettings.freeShippingThreshold != null &&
       subtotal >= restaurantSettings.freeShippingThreshold;
     const deliveryFee = freeShippingUnlocked ? 0 : await resolveDeliveryFee(body.order, body.delivery, restaurantSettings.deliveryFee);
-    const totals = applyTotals(body.order, subtotal, deliveryFee);
+    const coupon = await findValidCoupon(admin, body.restaurantSlug, body.order.couponCode);
+    const totals = applyTotals(body.order, subtotal, deliveryFee, coupon);
     const amount = totals.amount;
     if (amount < 0.5) return NextResponse.json({ error: "Valor do pedido inválido." }, { status: 400 });
 

@@ -6,6 +6,7 @@ import { ArrowRight, Clock, ExternalLink, Package, ReceiptText, TicketPercent, T
 import { getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
 import { getRemoteOrders } from "@/lib/data/supabase-orders";
+import { getRemoteCoupons, getRestaurantIdBySlug } from "@/lib/data/supabase-coupons";
 import { buildReportSummary } from "@/lib/reports";
 import { formatCurrency } from "@/lib/utils";
 import type { OrderStatus, Product } from "@/types/domain";
@@ -24,11 +25,15 @@ export default function DashboardPage() {
   useEffect(() => {
     let ignore = false;
     async function refresh() {
-      const [remoteOrders, snapshot] = await Promise.all([getRemoteOrders(restaurantSlug).catch(() => null), getMenuSnapshot(restaurantSlug).catch(() => null)]);
+      const [remoteOrders, snapshot, remoteCoupons] = await Promise.all([
+        getRemoteOrders(restaurantSlug).catch(() => null),
+        getMenuSnapshot(restaurantSlug).catch(() => null),
+        getRestaurantIdBySlug(restaurantSlug).then((id) => (id ? getRemoteCoupons(id) : null)).catch(() => null)
+      ]);
       if (ignore) return;
       setOrders(remoteOrders ?? getOrders());
       setProducts(snapshot?.products.length ? snapshot.products : getProducts());
-      setCoupons(getCoupons());
+      setCoupons(remoteCoupons ?? getCoupons());
     }
     refresh();
     const interval = window.setInterval(refresh, 15000);

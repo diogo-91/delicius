@@ -4,6 +4,7 @@ import { decimalNumberKeyDown, integerNumberKeyDown } from "@/lib/masks";
 import { useEffect, useMemo, useState } from "react";
 import { Percent, Plus, ToggleLeft, ToggleRight, TicketPercent } from "lucide-react";
 import { getCoupons, getRestaurant, saveCoupon, toggleCoupon } from "@/lib/data/mock-store";
+import { createRemoteCoupon, getRemoteCoupons, getRestaurantIdBySlug, setRemoteCouponActive } from "@/lib/data/supabase-coupons";
 import { formatCurrency } from "@/lib/utils";
 import type { Coupon, CouponType } from "@/types/domain";
 import { AdminBadge } from "@/components/admin/ui/badge";
@@ -22,9 +23,15 @@ function describeCoupon(coupon: Coupon) {
   return "Remove a taxa de entrega";
 }
 
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
 export function CouponManager() {
   const restaurant = getRestaurant();
-  const [coupons, setCoupons] = useState<Coupon[]>(getCoupons());
+  // Com Supabase os cupons ficam no banco e valem para todos os clientes; o localStorage só vale no modo local.
+  const [coupons, setCoupons] = useState<Coupon[]>(() => (supabaseConfigured ? [] : getCoupons()));
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     code: "",
     description: "",
@@ -36,8 +43,33 @@ export function CouponManager() {
   });
 
   useEffect(() => {
-    setCoupons(getCoupons());
-  }, []);
+    if (!supabaseConfigured) {
+      setCoupons(getCoupons());
+      return;
+    }
+
+    let ignore = false;
+    async function loadRemoteCoupons() {
+      const id = await getRestaurantIdBySlug(restaurant.slug);
+      if (ignore) return;
+      if (!id) {
+        setMessage("Não foi possível localizar o restaurante no Supabase.");
+        return;
+      }
+      setRestaurantId(id);
+      const remote = await getRemoteCoupons(id);
+      if (ignore) return;
+      if (remote) setCoupons(remote);
+      else setMessage("Não foi possível carregar os cupons do Supabase.");
+    }
+
+    loadRemoteCoupons().catch(() => {
+      if (!ignore) setMessage("Não foi possível carregar os cupons do Supabase.");
+    });
+    return () => {
+      ignore = true;
+    };
+  }, [restaurant.slug]);
 
   const activeCoupons = useMemo(() => coupons.filter((coupon) => coupon.active).length, [coupons]);
 
@@ -53,9 +85,38 @@ export function CouponManager() {
     });
   }
 
-  function createCoupon() {
+  async function createCoupon() {
     if (!form.code.trim()) return;
     const type = form.type;
+
+    if (supabaseConfigured) {
+      if (!restaurantId) {
+        setMessage("Restaurante ainda não carregado. Tente novamente em instantes.");
+        return;
+      }
+      setSaving(true);
+      setMessage("");
+      try {
+        const created = await createRemoteCoupon(restaurantId, {
+          code: form.code,
+          description: form.description || describeCoupon({ type, value: Number(form.value || 0) } as Coupon),
+          type,
+          value: type === "delivery" ? 0 : Number(form.value || 0),
+          usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined,
+          minimumOrderValue: form.minimumOrderValue ? Number(form.minimumOrderValue) : undefined,
+          // fim do dia no horário local, para o cupom valer durante todo o último dia
+          expiresAt: form.expiresAt ? new Date(`${form.expiresAt}T23:59:59`).toISOString() : undefined
+        });
+        setCoupons((current) => [created, ...current]);
+        resetForm();
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Não foi possível criar o cupom.");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     const next = saveCoupon({
       id: `coupon_${Date.now()}`,
       restaurantId: restaurant.id,
@@ -74,8 +135,21 @@ export function CouponManager() {
     resetForm();
   }
 
-  function switchStatus(couponId: string) {
-    setCoupons(toggleCoupon(couponId));
+  async function switchStatus(couponId: string) {
+    if (!supabaseConfigured) {
+      setCoupons(toggleCoupon(couponId));
+      return;
+    }
+
+    const coupon = coupons.find((item) => item.id === couponId);
+    if (!coupon) return;
+    setMessage("");
+    try {
+      await setRemoteCouponActive(couponId, !coupon.active);
+      setCoupons((current) => current.map((item) => (item.id === couponId ? { ...item, active: !item.active } : item)));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível alterar o cupom.");
+    }
   }
 
   return (
@@ -109,10 +183,11 @@ export function CouponManager() {
             <AdminInput placeholder="Pedido mínimo" type="number" min="0" step="0.01" inputMode="decimal" onKeyDown={decimalNumberKeyDown} value={form.minimumOrderValue} onChange={(event) => setForm({ ...form, minimumOrderValue: event.target.value })} />
             <AdminInput placeholder="Limite de uso" type="number" min="0" step="1" inputMode="numeric" onKeyDown={integerNumberKeyDown} value={form.usageLimit} onChange={(event) => setForm({ ...form, usageLimit: event.target.value })} />
             <AdminInput placeholder="Validade" type="date" value={form.expiresAt} onChange={(event) => setForm({ ...form, expiresAt: event.target.value })} />
-            <AdminButton className="w-full" onClick={createCoupon} type="button">
+            <AdminButton className="w-full" disabled={saving} onClick={createCoupon} type="button">
               <Plus className="h-4 w-4" />
-              Criar cupom
+              {saving ? "Salvando..." : "Criar cupom"}
             </AdminButton>
+            {message && <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{message}</p>}
           </div>
         </section>
 

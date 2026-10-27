@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CalendarDays, Check, ChefHat, Clock, Copy, CreditCard, Flame, Gift, Heart, ListFilter, LoaderCircle, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChefHat, Clock, Copy, CreditCard, Flame, Gift, Heart, ListFilter, LoaderCircle, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Trash2, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, buildOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -10,6 +10,7 @@ import { getRemoteCustomerProfile, saveRemoteCustomerProfile } from "@/lib/data/
 import { CepInput } from "@/components/menu/cep-input";
 import { maskCardNumber, maskCep, maskCpfCnpj, maskExpiry, maskPhone, onlyDigits } from "@/lib/masks";
 import { getPublicRestaurantBySlug } from "@/lib/data/supabase-restaurant";
+import { getRemoteCoupons, isCouponUsable } from "@/lib/data/supabase-coupons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatCurrency, formatScheduledFor } from "@/lib/utils";
 import type { CartItem, Category, Coupon, Order, OrderStatus, OrderType, PaymentMethod, Product, Restaurant, WeekdaySchedule } from "@/types/domain";
@@ -276,7 +277,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   const [bannerScrollNonce, setBannerScrollNonce] = useState(0);
   const [cart, setCart] = useState<CartItem[]>(readSavedCart);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(readSavedFavorites);
-  const [coupons, setCoupons] = useState<Coupon[]>(getCoupons());
+  // Com Supabase os cupons vêm do banco (iguais para todo cliente); o localStorage só vale no modo local.
+  const [coupons, setCoupons] = useState<Coupon[]>(() => (supabaseConfigured ? [] : getCoupons()));
   const [ordersSnapshot, setOrdersSnapshot] = useState<Order[]>(getOrders());
   const [customer, setCustomer] = useState<CustomerForm>(defaultCustomer);
   const [customerProfile, setCustomerProfile] = useState<CustomerForm>(defaultCustomer);
@@ -416,6 +418,8 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         const remoteRestaurant = await getPublicRestaurantBySlug(menuSlug);
         if (!ignore && remoteRestaurant) {
           setRestaurant(remoteRestaurant);
+          const remoteCoupons = await getRemoteCoupons(remoteRestaurant.id);
+          if (!ignore && remoteCoupons) setCoupons(remoteCoupons);
         }
         const snapshot = await getMenuSnapshot(menuSlug);
         if (!ignore && snapshot && snapshot.products.length > 0) {
@@ -472,7 +476,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         setCategories(getCategories());
         setProducts(getProducts().filter((product) => product.active));
       }
-      setCoupons(getCoupons());
+      if (!supabaseConfigured) setCoupons(getCoupons());
       if (!remoteOrdersLoadedRef.current) setOrdersSnapshot(getOrders());
     }
 
@@ -1098,11 +1102,11 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
 
   function applyCoupon() {
     const normalized = couponCode.trim().toUpperCase();
-    const coupon = coupons.find((item) => item.code === normalized && item.active);
+    const coupon = coupons.find((item) => item.code === normalized && isCouponUsable(item));
     const baseTotal = subtotal + deliveryFee;
     if (!coupon) {
       setAppliedCoupon(null);
-      setCouponMessage("Cupom inválido. Teste DEL10, DOCE5 ou FRETEGRATIS.");
+      setCouponMessage("Cupom inválido ou expirado.");
       return;
     }
 
@@ -1364,6 +1368,15 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               <Button variant="secondary" className="h-8 w-8 rounded-lg px-0" onClick={() => updateQuantity(index, item.quantity + 1)} type="button">
                 <Plus className="h-4 w-4" />
               </Button>
+              <button
+                className="ml-auto flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                onClick={() => updateQuantity(index, 0)}
+                aria-label={`Remover ${item.productName} da sacola`}
+                type="button"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remover
+              </button>
             </div>
           </div>
         ))}
@@ -1501,7 +1514,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
           <div className="mt-2 flex gap-2">
             <Input
               className="h-10 bg-white uppercase"
-              placeholder="DEL10, DOCE5 ou FRETEGRATIS"
+              placeholder="Digite o código do cupom"
               value={couponCode}
               onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
             />
