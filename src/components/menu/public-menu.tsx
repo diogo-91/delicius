@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChefHat, Clock, Copy, CreditCard, Flame, Gift, Heart, ListFilter, LoaderCircle, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChefHat, Clock, Copy, CreditCard, Flame, Gift, Heart, ListFilter, LoaderCircle, MapPin, Minus, PackageCheck, Plus, Search, Send, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Star, Truck, UserCircle, Utensils, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { STORE_UPDATED_EVENT, buildOrder, getCategories, getCoupons, getOrders, getProducts, getRestaurant } from "@/lib/data/mock-store";
 import { getMenuSnapshot } from "@/lib/data/supabase-menu";
@@ -284,7 +284,11 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   const [profileMessage, setProfileMessage] = useState("");
   const [type, setType] = useState<OrderType>("delivery");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
-  const [addressMode, setAddressMode] = useState<"saved" | "other">("saved");
+  // Começa em "other": o endereço salvo só faz sentido depois do login (ver hasSavedAddress).
+  const [addressMode, setAddressMode] = useState<"saved" | "other">("other");
+  // No celular a sacola e o checkout são duas telas; no desktop as duas colunas aparecem juntas.
+  const [checkoutStep, setCheckoutStep] = useState<"bag" | "checkout">("bag");
+  const [proceedAfterLogin, setProceedAfterLogin] = useState(false);
   const [deliveryQuote, setDeliveryQuote] = useState<{ status: "idle" | "loading" | "ok" | "unavailable"; fee: number | null; km: number | null }>({
     status: "idle",
     fee: null,
@@ -350,6 +354,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       setPaymentMethod(saved.order.paymentMethod);
       setPaymentStatus("pending");
       setPaymentMessage("Retomando a confirmação do seu pagamento...");
+      setCheckoutStep("checkout");
       setCartModalOpen(true);
     } catch {
       window.localStorage.removeItem(pendingPaymentStorageKey);
@@ -732,6 +737,33 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   // Usuario anonimo do Supabase (login de convidado) NAO conta como conta logada.
   const customerIsAuthenticated = Boolean((user && !user.is_anonymous) || (!supabaseConfigured && localCustomerSession));
   const customerHistory = customerIsAuthenticated ? ordersSnapshot.slice(0, 3) : [];
+  // "Usar endereço cadastrado" só aparece para quem está logado e já tem endereço salvo.
+  const hasSavedAddress = customerIsAuthenticated && Boolean(formatCustomerAddress(customerProfile));
+
+  useEffect(() => {
+    setAddressMode(hasSavedAddress ? "saved" : "other");
+  }, [hasSavedAddress]);
+
+  // Depois do login iniciado pelo botão "Continuar", segue direto para o checkout.
+  useEffect(() => {
+    if (!proceedAfterLogin || !customerIsAuthenticated) return;
+    setProceedAfterLogin(false);
+    setCheckoutStep("checkout");
+    setCartModalOpen(true);
+  }, [proceedAfterLogin, customerIsAuthenticated]);
+
+  function goToCheckout() {
+    if (cart.length === 0) return;
+    if (!customerIsAuthenticated) {
+      setProceedAfterLogin(true);
+      setAuthMode("login");
+      setAuthMessage("Entre ou crie sua conta para finalizar o pedido.");
+      setAuthModalOpen(true);
+      return;
+    }
+    setCheckoutStep("checkout");
+  }
+
   const displayName = useMemo(() => restaurant.name.replace(/\s*BOLOS E SALGADOS\s*/i, "").trim(), [restaurant.name]);
   const openingHours = useMemo(() => getOpeningHoursSummary(restaurant.weeklySchedule ?? defaultWeeklySchedule), [restaurant.weeklySchedule]);
   const openStatus = useMemo(() => getStoreOpenStatus(restaurant, now), [now, restaurant]);
@@ -893,7 +925,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
       deliveryFee: type === "delivery" ? deliveryFee : undefined
     });
     setPaymentStatus("processing");
-    setPaymentMessage("Conectando ao Asaas...");
+    setPaymentMessage("Processando pagamento...");
 
     try {
       const response = await fetch("/api/payments/asaas", {
@@ -929,7 +961,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         pendingPaymentStorageKey,
         JSON.stringify({ sessionId: result.sessionId, order, pix: result.pix ?? null, createdAt: Date.now() })
       );
-      setPaymentMessage(paymentMethod === "pix" ? "Escaneie o QR Code ou copie o código Pix. A confirmação é automática." : "Pagamento enviado. Aguardando confirmação do Asaas.");
+      setPaymentMessage(paymentMethod === "pix" ? "Escaneie o QR Code ou copie o código Pix. A confirmação é automática." : "Pagamento enviado. Aguardando a confirmação.");
       setSlotPickerOpen(false);
       setSelectedSlot(null);
       setLastOrderWasGuest(wasGuest);
@@ -1028,6 +1060,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
   }
 
   function openCart() {
+    setCheckoutStep("bag");
     setCartModalOpen(true);
   }
 
@@ -1302,7 +1335,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
     </div>
   ) : (
     <div className="grid gap-5 p-5 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="space-y-3">
+      <div className={`space-y-3 ${checkoutStep === "checkout" ? "max-lg:hidden" : ""}`}>
         {type === "delivery" && freeShippingThreshold != null && (
           <FreeShippingProgress subtotal={subtotal} threshold={freeShippingThreshold} />
         )}
@@ -1361,9 +1394,27 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             </div>
           </div>
         )}
+
+        {/* Só no celular: a sacola é uma tela e o pagamento é a próxima. */}
+        <div className="sticky bottom-0 -mx-1 bg-white/95 px-1 pb-1 pt-2 lg:hidden">
+          <Button variant="success" className="h-12 w-full rounded-xl" disabled={cart.length === 0} onClick={goToCheckout} type="button">
+            CONTINUAR PARA O PAGAMENTO
+          </Button>
+          {!customerIsAuthenticated && cart.length > 0 && (
+            <p className="mt-1.5 text-center text-[11px] text-muted">Você vai entrar ou criar sua conta para finalizar.</p>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-3 border-t border-line pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+      <div className={`space-y-3 border-t border-line pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0 ${checkoutStep === "bag" ? "max-lg:hidden" : ""}`}>
+        <button
+          className="flex items-center gap-1.5 text-sm font-semibold text-brand-700 lg:hidden"
+          onClick={() => setCheckoutStep("bag")}
+          type="button"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para a sacola
+        </button>
         <Input placeholder="Nome completo" value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} />
         <Input type="tel" inputMode="tel" maxLength={15} placeholder="Telefone/WhatsApp" value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: maskPhone(event.target.value) })} />
         <div>
@@ -1393,25 +1444,29 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         {type === "delivery" && (
           <div className="space-y-3 rounded-xl border border-line bg-white/60 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">Endereço de entrega</p>
-            <button
-              className={`w-full rounded-xl border p-3 text-left transition ${
-                addressMode === "saved" ? "border-success-600 bg-success-50 text-ink" : "border-line bg-white text-muted hover:border-success-500"
-              }`}
-              onClick={() => setAddressMode("saved")}
-              type="button"
-            >
-              <span className="block text-sm font-semibold text-ink">Usar endereço cadastrado</span>
-              <span className="mt-1 block text-xs leading-5">{formatCustomerAddress(customerProfile) || "Cadastre seu endereço na Área do cliente."}</span>
-            </button>
-            <button
-              className={`h-10 w-full rounded-xl border text-sm font-semibold transition ${
-                addressMode === "other" ? "border-success-600 bg-success-500 text-white" : "border-line bg-white text-ink hover:border-success-500"
-              }`}
-              onClick={() => setAddressMode("other")}
-              type="button"
-            >
-              Entregar em outro endereço
-            </button>
+            {hasSavedAddress && (
+              <>
+                <button
+                  className={`w-full rounded-xl border p-3 text-left transition ${
+                    addressMode === "saved" ? "border-success-600 bg-success-50 text-ink" : "border-line bg-white text-muted hover:border-success-500"
+                  }`}
+                  onClick={() => setAddressMode("saved")}
+                  type="button"
+                >
+                  <span className="block text-sm font-semibold text-ink">Usar endereço cadastrado</span>
+                  <span className="mt-1 block text-xs leading-5">{formatCustomerAddress(customerProfile)}</span>
+                </button>
+                <button
+                  className={`h-10 w-full rounded-xl border text-sm font-semibold transition ${
+                    addressMode === "other" ? "border-success-600 bg-success-500 text-white" : "border-line bg-white text-ink hover:border-success-500"
+                  }`}
+                  onClick={() => setAddressMode("other")}
+                  type="button"
+                >
+                  Entregar em outro endereço
+                </button>
+              </>
+            )}
             {addressMode === "other" && (
               <div className="grid gap-3 sm:grid-cols-[1fr_96px]">
                 <CepInput
@@ -1464,27 +1519,23 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
         </div>
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Forma de pagamento</p>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2">
             {[
-              { value: "pix", label: "Pix", disabled: false },
-              { value: "credit_card", label: "Cartão de crédito", disabled: false },
-              { value: "debit_card", label: "Débito online", disabled: true }
+              { value: "pix", label: "Pix" },
+              { value: "credit_card", label: "Cartão de crédito" }
             ].map((option) => (
               <button
                 key={option.value}
                 className={`h-10 rounded-xl border px-3 text-sm font-semibold transition ${
-                  option.disabled ? "cursor-not-allowed border-line bg-slate-100 text-muted opacity-60" : paymentMethod === option.value ? "border-success-600 bg-success-500 text-white shadow-soft" : "border-line bg-white text-ink hover:border-success-500"
+                  paymentMethod === option.value ? "border-success-600 bg-success-500 text-white shadow-soft" : "border-line bg-white text-ink hover:border-success-500"
                 }`}
-                onClick={() => !option.disabled && selectPaymentMethod(option.value as PaymentMethod)}
-                disabled={option.disabled}
-                title={option.disabled ? "O Asaas ainda não oferece débito no checkout transparente pela API pública." : undefined}
+                onClick={() => selectPaymentMethod(option.value as PaymentMethod)}
                 type="button"
               >
                 {option.label}
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-muted">Débito online será ativado quando o Asaas disponibilizar essa modalidade na API de checkout transparente.</p>
         </div>
 
         {paymentMethod === "pix" ? (
@@ -1493,7 +1544,7 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
               <div className="grid gap-2 sm:grid-cols-2">
                 <Input className="bg-white" inputMode="numeric" maxLength={18} placeholder="CPF ou CNPJ" value={payerForm.cpfCnpj} onChange={(event) => setPayerForm({ ...payerForm, cpfCnpj: maskCpfCnpj(event.target.value) })} />
                 <Input className="bg-white" type="email" placeholder="E-mail" value={payerForm.email} onChange={(event) => setPayerForm({ ...payerForm, email: event.target.value })} />
-                <p className="text-xs text-muted sm:col-span-2">O QR Code real será gerado pelo Asaas ao finalizar.</p>
+                <p className="text-xs text-muted sm:col-span-2">O QR Code Pix será gerado ao finalizar o pedido.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -1518,14 +1569,14 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             <Input className="bg-white" type="email" placeholder="E-mail do titular" value={cardForm.email} onChange={(event) => setCardForm({ ...cardForm, email: event.target.value })} />
             <Input className="bg-white" inputMode="numeric" maxLength={9} placeholder="CEP" value={cardForm.postalCode} onChange={(event) => setCardForm({ ...cardForm, postalCode: maskCep(event.target.value) })} />
             <Input className="bg-white" inputMode="numeric" maxLength={6} placeholder="Número do endereço" value={cardForm.addressNumber} onChange={(event) => setCardForm({ ...cardForm, addressNumber: onlyDigits(event.target.value, 6) })} />
-            <p className="text-xs text-muted sm:col-span-2">Se o cartão ainda não estiver habilitado na conta Asaas, o pagamento será recusado sem criar o pedido.</p>
+            <p className="text-xs text-muted sm:col-span-2">Se o pagamento for recusado, nenhum pedido será criado.</p>
           </div>
         )}
 
         <div className="rounded-xl border border-line bg-white/70 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-ink">Pagamento seguro via Asaas</p>
+              <p className="text-sm font-semibold text-ink">Pagamento seguro</p>
               <p className="mt-1 text-xs text-muted">Seus dados são processados de forma segura e não ficam armazenados.</p>
             </div>
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatus === "approved" ? "bg-emerald-50 text-emerald-700" : paymentStatus === "failed" ? "bg-red-50 text-red-700" : "bg-slate-100 text-muted"}`}>
@@ -2101,10 +2152,18 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
             <UserCircle className="h-4 w-4 text-brand-600" />
             Cliente
           </button>
-          <button className="relative flex min-h-10 flex-col items-center justify-center gap-0.5 rounded-2xl bg-[#4f2618] text-[10px] font-semibold text-white shadow-[0_4px_12px_rgba(79,38,24,0.14)] transition duration-200 motion-reduce:transition-none active:scale-[0.96]" onClick={openCart} type="button">
+          <button
+            className={`relative flex min-h-10 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold text-white transition duration-200 motion-reduce:transition-none active:scale-[0.96] ${
+              cart.length > 0 ? "bg-success-500 shadow-[0_4px_12px_rgba(22,163,74,0.35)]" : "bg-[#4f2618] shadow-[0_4px_12px_rgba(79,38,24,0.14)]"
+            }`}
+            onClick={openCart}
+            type="button"
+          >
             <ShoppingBag className="h-4 w-4" />
-            Sacola
-            <span className="absolute right-3 top-1 rounded-full bg-white px-1.5 py-0.5 text-[9px] font-bold leading-none text-brand-700 shadow-[0_2px_5px_rgba(79,38,24,0.10)]">{cart.length}</span>
+            {cart.length > 0 ? "Finalizar pedido" : "Sacola"}
+            {cart.length > 0 && (
+              <span className="absolute right-2 top-1 rounded-full bg-white px-1.5 py-0.5 text-[9px] font-bold leading-none text-success-700 shadow-[0_2px_5px_rgba(0,0,0,0.12)]">{cart.length}</span>
+            )}
           </button>
           <button className="flex min-h-10 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold text-muted transition duration-200 motion-reduce:transition-none active:scale-[0.96]" onClick={() => setMobileFiltersOpen(true)} type="button">
             <ListFilter className="h-4 w-4 text-brand-600" />
@@ -2378,7 +2437,14 @@ export function PublicMenu({ slug = defaultMenuSlug }: { slug?: string }) {
                 <h2 className="text-xl font-semibold text-ink">Área do cliente</h2>
                 <p className="mt-1 text-sm text-muted">Acesse seu histórico, favoritos e próximos pedidos.</p>
               </div>
-              <button className="rounded-lg p-2 text-muted hover:bg-slate-100" onClick={() => setAuthModalOpen(false)} type="button">
+              <button
+                className="rounded-lg p-2 text-muted hover:bg-slate-100"
+                onClick={() => {
+                  setAuthModalOpen(false);
+                  setProceedAfterLogin(false);
+                }}
+                type="button"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
